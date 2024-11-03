@@ -1,0 +1,307 @@
+---
+title: "Project 1"
+subtitle: "Course DS 250"
+author: "Tonatiuh de Leon"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+#| label: libraries
+
+# Loading libraries ----------------------------------------------
+import pandas as pd
+import numpy as np
+from lets_plot import *
+#from IPython.display import display, HTML
+#from plotnine import *
+LetsPlot.setup_html(isolated_frame=True, no_js=True)
+
+# Reading data ----------------------------------------------
+url = "https://github.com/byuidatascience/data4names/raw/master/data-raw/names_year/names_year.csv"
+df = pd.read_csv(url)
+
+```
+
+<br>
+
+## How does your name at your birth year compare to its use historically?
+
+> Here's a placeholder name from a movie I like since I didn't find my name.
+
+```{python}
+
+# Data wrangling ----------------------------------------------
+john = df[df['name'].str.lower().str.contains('maximus')]
+
+
+# Plotting ----------------------------------------------
+
+(
+    ggplot(john, aes(x='year', y='Total')) +
+    geom_line(color="blue", size=1) +
+    labs(title="Babies Named Maximus Over Years", x="Year", y="Total") +
+    theme_minimal() +
+    scale_x_continuous(
+    breaks=list(range(1910, 2021, 5)),
+    labels=[str(x) for x in range(1910, 2021, 5)]) +
+    theme(
+        plot_title=element_text(size=14, face="bold", color="black"),
+        plot_subtitle=element_text(size=12, color="grey"),
+        axis_title_x=element_text(size=12, color="grey"),
+        axis_title_y=element_text(size=12, color="grey"),
+        axis_text=element_text(size=10, color="grey")
+    )
+)
+
+
+
+```
+
+<br>
+
+## If you talked to someone named Brittany on the phone, what is your guess of his or her age? What ages would you not guess?
+
+> Well now that I see this, Brittany was a popular name around the 2000's, maybe because of Britney Spears, however she was only 10 at the time. Maybe there was a something going on in popular culture at the time and many girls were named Brittany back then.
+
+```{python, fig.align='center'}
+
+# Data wrangling ----------------------------------------------
+brit = df[df['name'].str.lower().str.contains('brittany')]
+
+
+# Plotting ----------------------------------------------
+vlines = pd.DataFrame({
+    'xintercept': [1985, 1995]
+})
+
+
+(
+    ggplot(brit, aes(x='year', y='Total')) +
+    geom_line(color="blue", size=1) +
+    geom_vline(mapping=aes(xintercept='xintercept'), data=vlines, color="red", linetype="dashed", size=1) +
+    labs(title="Total Brittany Babies Over The Years", x="Year", y="Total") +
+    theme_minimal() +
+    scale_x_continuous(
+    breaks=list(range(1910, 2021, 20)),
+    labels=[str(x) for x in range(1910, 2021, 20)]) +
+    theme(
+        plot_title=element_text(size=14, face="bold", color="black"),
+        plot_subtitle=element_text(size=12, color="grey"),
+        axis_title_x=element_text(size=12, color="grey"),
+        axis_title_y=element_text(size=12, color="grey"),
+        axis_text=element_text(size=10, color="grey")
+    )
+)
+
+
+```
+
+<br>
+
+## Analysis of babies named, Mary, Martha, Peter, and Paul.
+
+> There seems to be a decline in these christian names over the years. This mustn't be correlated to decline in christian believers, maybe people want to name their kids otherwise.
+
+
+```{python}
+
+# Data wrangling ----------------------------------------------
+df['name_group'] = df['name'].str.lower().apply(
+    lambda x: 'Mary' if 'mary' in x else
+              'Martha' if 'martha' in x else
+              'Peter' if 'peter' in x else
+              'Paul' if 'paul' in x else 'Other'
+)
+
+christians = df[df['name_group'] != 'Other'].groupby(['name_group', 'year']).agg({'Total': 'sum'}).reset_index()
+
+
+# Plotting ----------------------------------------------
+color_dict = {
+    'Mary': '#FFA500',       
+    'Martha': '#4682B4',     
+    'Peter': '#8FBC8F',      
+    'Paul': '#D2691E'        
+}
+
+(ggplot(christians, aes(x='year', y='Total', color='name_group')) +
+geom_line(size=1.2) +
+labs(
+    title="Trends of Popular Christian Names Over Time",
+    subtitle="Analysis of total occurrences of derivations of Mary, Martha, Peter, and Paul",
+    x="Year", 
+    y="Total Count", 
+    color="Name Group") +
+scale_color_manual(values=color_dict) +
+scale_x_continuous(
+    breaks=list(range(1910, 2021, 20)),
+    labels=[str(x) for x in range(1910, 2021, 20)]) +
+theme_minimal() +
+theme(
+    plot_title=element_text(size=14, face="bold", color="black"),
+    plot_subtitle=element_text(size=12, color="grey"),
+    axis_title_x=element_text(size=12, color="grey"),
+    axis_title_y=element_text(size=12, color="grey"),
+    axis_text=element_text(size=10, color="grey")
+))
+
+
+
+```
+
+<br>
+
+## Did The Matrix Movie Release had an Impact on Babies named Neo?
+
+> Not many babies have been called Neo overall. Coming from the Matrix, the name 'Neo' had an outbusrt when the first Matrix movie was released. I do wonder why there's a similar outburst in Neo babies so far back in the past! 
+
+```{python}
+
+# Data wrangling ----------------------------------------------
+neo_data = df[df['name'].str.lower().str.contains('neo')]
+
+# Plotting ----------------------------------------------
+
+(
+    ggplot(neo_data, aes(x='year', y='Total', color='name')) +
+    geom_line(size=1.2, color="#4682B4") +
+    geom_vline(xintercept=1999, color="red", linetype="dashed", size=1.2) +
+    labs(
+        title="Usage of the Name 'Neo' Over Time",
+        subtitle="The effect of 'The Matrix' (1999) on the popularity of the name",
+        x="Year", 
+        y="Total Count"
+    ) +
+    scale_x_continuous(
+        breaks=list(range(1910, 2025, 20)),
+        labels=[str(x) for x in range(1910, 2025, 20)]) +
+    theme_minimal() +
+    theme(
+        plot_title=element_text(size=14, face="bold", color="black"),
+        plot_subtitle=element_text(size=12, color="grey"),
+        axis_title_x=element_text(size=12, color="grey"),
+        axis_title_y=element_text(size=12, color="grey"),
+        axis_text=element_text(size=10, color="grey"),
+        legend_position='none'
+    )
+)
+
+```
+
+<br>
+
+## Stretch challenge
+
+> Here's my stretch challenge
+
+```{python, fig.width=10}
+
+# Data wrangling ----------------------------------------------
+elliot = (
+    df[df['name'].str.lower().str.contains('elliot')].copy()
+)
+
+elliot['name'] = (
+    elliot['name']
+    .apply(lambda x: 'Elliot' if 'elliot' in x.lower() else 'Other')
+)
+
+elliot_grouped = (
+    elliot.groupby(['name','year'], as_index=False)['Total'].sum())
+
+elliot_grouped = elliot_grouped[elliot_grouped['year'] > 1950]
+
+# Plotting ----------------------------------------------
+
+vlines = pd.DataFrame({'xintercept': [1982, 1985, 2002]})
+
+elliot_grouped['year'] = elliot_grouped['year'].astype(int)
+elliot_grouped['Total'] = elliot_grouped['Total'].astype(float)
+
+(
+    ggplot(elliot_grouped) +
+    geom_line(aes(x='year', y='Total', color='name'), size=1) +
+    geom_vline(aes(xintercept='xintercept'), data=vlines, color="red", linetype="dashed", size=1) +
+    geom_text(
+        x=1982,
+        y=elliot_grouped['Total'].max(),
+        label="E.T. Released",
+        hjust=1,  # Align text to the left
+        vjust=1,
+        size=5,
+        color="grey"
+    ) +
+    geom_text(
+        x=1985,
+        y=elliot_grouped['Total'].max(),
+        label="Second Release",
+        hjust=0,  # Align text to the right
+        vjust=1,
+        size=5,
+        color="grey"
+    ) +
+     geom_text(
+        x=2002,
+        y=elliot_grouped['Total'].max(),
+        label="Third Release",
+        hjust=0,  # Align text to the right
+        vjust=1,
+        size=5,
+        color="grey"
+    ) +
+    scale_color_manual({'Elliot': "darkblue"}) +
+    ggtitle("Elliot... What?", subtitle='Names Counted Include: "Elliot" & "Elliott"') +
+    xlab("Year") +
+    ylab("Total") +
+    theme_minimal() +
+    scale_x_continuous(
+        breaks=list(range(1950, 2010, 10)),
+        labels=[str(x) for x in range(1950, 2010, 10)]
+    ) +
+    theme(
+        axis_title_x=element_text(size=12, color="grey"),
+        axis_title_y=element_text(size=12, color="grey"),
+        axis_text=element_text(size=10, color="grey"),
+        plot_title=element_text(size=14, face="bold", color="black", hjust=0),
+        plot_subtitle=element_text(size=12, color="grey", hjust=0),
+        legend_position="right"
+    )
+)
+
+```
+
+
+```{python}
+#| label: Quiz Work
+
+## quiz work --------------------------------
+
+#ut = df[df['name'].str.lower().str.contains('oliver')].agg({'UT': 'sum'})
+
+#print(ut)
+
+#fe = df[df['name'].str.lower().str.contains('felisha')]['year'].min()
+
+#print(fe)
+
+```

@@ -1,0 +1,168 @@
+---
+title: "Who uses More Internet, Boys or Girls?"
+author: "Tonatiuh De Leon"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+---
+
+<br>
+
+### Introduction
+
+> This project explores whether gender plays a role in **how much importance high school seniors place on their daily internet usage**. Utilizing the HSS dataset in R, a **two-sample t-test** is employed to statistically analyze the collected data. The goal is to determine if there is a meaningful disparity in the mean importance levels assigned to internet access by different genders. Understanding these dynamics can provide valuable insights for educators, policymakers, and technology providers to better address the varying needs and preferences of students in an increasingly connected world.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(DT)
+library(pander)
+library(readr)
+library(car)
+library(ggridges)
+
+HSS <- read_csv("HighSchoolSeniors.csv")
+#Remember: select "Session, Set Working Directory, To Source File Location", and then play this R-chunk into your console to read the HSS data into R.
+
+
+HSS1 <- HSS |>
+  select(Gender, Importance_Internet_access) |> 
+  filter(Importance_Internet_access <= 1000) |> 
+  drop_na()
+
+
+```
+
+---
+
+#  {.tabset .tabset-pills .tabset-fade}
+
+## Hide Data
+
+## Show Data
+
+```{r message=FALSE, warning=FALSE}
+
+datatable(HSS1)
+
+```
+
+#
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Hypothesis**</strong></p>
+
+```{r, message=F, warning=F, fig.align='center'}
+
+plot <- ggplot(HSS1, aes(x = Importance_Internet_access, y = Gender, fill = Gender)) +
+  geom_density_ridges(scale = 2, rel_min_height = 0.01) +
+  labs(title = "Importance Given To the Internet Use Comparison By Gender",
+       x = "Internet Importance Score",
+       y = "Gender") +
+  scale_fill_manual(values = c("orange", "skyblue2")) +
+  theme_ridges()
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, message=F, warning=F, fig.align='center', echo=FALSE, fig.width=10}
+
+plot
+
+```
+
+</div>
+<div class="graph-container" data-graphname="ttestridges">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+<br>
+
+An experiment was conducted to determine if a Gender gives more importance to internet access than the other (Male & Female). A sample of 449 High School Seniors was studied. They were asked in a scale of 0 to 1000 The level of importance they gave to their daily internet usage. '
+<br>
+The data is contained in the `HSS` data set in R. (See last tab)
+<br>
+It is assumed that the Internet Access importance mean level by gender is not different from each other. Symbolically represented by <span class="latex-container" style="color: #127566;">$\mu_\text{Female} \ = \mu_\text{Male}$</span>. And graphically represented by the graph above.
+
+<br>
+
+Thus, the question being do one gender gives more importance to internet use than the other?
+
+Formally, the null and alternative hypotheses are written as:
+
+<br>
+
+<div class="latex-container">
+<span style="color: #127566;">
+$$
+  H_0: \mu_\text{(Internet|Female)} - \mu_\text{(Internet|Male)} = 0
+$$
+$$
+  H_a: \mu_\text{(Internet|Female)} - \mu_\text{(Internet|Male)} \neq 0
+$$
+</span>
+</div>
+
+<br>
+
+The significance level for this study will be set at:
+
+<div class="latex-container">
+
+$$
+  \alpha = 0.05
+$$
+
+</div>
+
+<br>
+
+An independent sample t test is used to test the previously stated null hypothesis. This allows us to decide if the pattern in the sample data can be assumed to hold for the full population. 
+
+<br>
+
+```{r}
+pander(
+  t.test(
+    Importance_Internet_access ~ Gender, 
+    data=HSS1, 
+    mu=0, 
+    alternative="two.sided", 
+    conf.level = 0.95), 
+  caption="Independent Samples t Test of Internet Use for Males and Females",
+  split.table=Inf)
+
+```
+
+<br>
+
+The results of the T-test show that there is **insufficient evidence to reject the null hypothesis** <span class="latex-container" style="color: #127566;"> $p = 0.4351 > \alpha$ </span> Thus concluding that importance to internet access is indifferent of gender in this population sample.
+<br>
+The data from the experiment showed a higher mean level of importance given to internet access in the female vs. the male group. However, as demonstrated by the T-test results. There is insufficient evidence to claim that this pattern will remain true for the general population, or even for repeated versions of this study (p = 0.4351).
+<br>
+It is recommended for more iterations of this test to be taken with different samples, this may reveal further insights or confirm what was found in this test.
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Conclusion**</strong></p>
+
+```{r, fig.align='center'}
+
+qqPlot(Importance_Internet_access ~ Gender, 
+       data=HSS1, 
+       ylab="Importance on Internet Use",
+       ylim = c(0, 900))
+```
+
+<br>
+
+The assumptions of the test must be shown to explain the considerations taken before conducting this analysis. It is difficult to verify if the sampling distribution of <span class="latex-container" style="color: #127566;">$\bar{x}_1 - \bar{x}_2$</span> is normal. However, it is true that if the separate sampling distributions of <span class="latex-container" style="color: #127566;">$\bar{x}_1$</span> and <span class="latex-container" style="color: #127566;">$\bar{x}_2$</span> are normally distributed, then it follows that the sampling distribution of <span class="latex-container" style="color: #127566;">$\bar{x}_1 - \bar{x}_2$</span> will be normally distributed. As long as the population data is normal, it follows that the sampling distribution of the sample mean is normal.
+
+Based on the Q-Q Plots above, it appears that the Internet Use data can be considered normal for each gender, which implies it is okay to assume that <span class="latex-container" style="color: #127566;">$\bar{x}_1 - \bar{x}_2$</span> is normally distributed. Even if the Q-Q Plots were considered not normal we could say that based on the central limit theorem we could have a normal distribution of the sample means. Therefore the independent samples t test is appropriate for these data.
+
+<br><br><br><br>

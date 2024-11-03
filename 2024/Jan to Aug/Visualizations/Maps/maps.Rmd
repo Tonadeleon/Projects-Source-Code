@@ -1,0 +1,480 @@
+---
+title: "Spatial Visualizations"
+author: "Tonatiuh De Leon"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+<br>
+
+### Introduction
+
+> This section of my portfolio contains many **Maps Visualizations** I've graphed throughout the years. Take a look at them! I created each graph from scratch in R, check out the code with the `show` buttons to the top right of each graph.
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## Kwh/Capita Static
+
+```{r, fig.width=10, fig.width=10, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(sf)
+library(viridis)
+library(RColorBrewer)
+library(cowplot)
+
+enuse <- read_csv("enuse.csv") %>%
+  rename(enused = `Primary energy consumption per capita (kWh/person)`, region = Entity, year = Year, code = Code) %>% 
+  filter(year == 2021) %>% 
+  mutate(region = case_when(
+  region == "United States" ~ "USA",
+  region == "Democratic Republic of Congo" ~ "Democratic Republic of the Congo" ,
+  region == "Congo" ~ "Republic of Congo",
+  region == "Cote d'Ivoire" ~ "Ivory Coast",
+  region == "United Kingdom" ~ "UK",
+  TRUE ~ region))
+
+
+enuse$enused <- log(enuse$enused)
+
+breaks <- c(0, 1, 2, 3, 4, 5)
+labels <- as.character(breaks)
+
+world_map <- map_data("world") %>% 
+  filter(!(region %in% c("French Southern and Antarctic Lands", "Antarctica")))
+
+world_map <- left_join(world_map, enuse, by = "region")
+
+mapp <- ggplot(world_map, aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = enused), color = "grey25")+
+  
+  scale_fill_gradientn(aesthetics = "fill",
+                       colors = c(
+                         "#e0f3dd", 
+                         "#f0f0d9", 
+                         "#fee090", 
+                         "#fdae61", 
+                         "#f46d43", 
+                         "#a50026"),
+                       
+                       limits=c(5,12.3),
+                       labels = c("0 kWh", "1,000 kWh", "3,000 kWh", "10,000 kWh", "30,000 kWh", "100,000 kWh"),
+                       breaks = c(5,6,8,9.5,11,12.3),
+                       guide = guide_colorbar(
+                         barwidth = 20, 
+                         barheight = 0.5)) +
+  labs(
+    fill = "kWh Per Capita"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_blank(),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_text(size=12, color = "grey5"),
+    legend.title.position = "top",
+    legend.text = element_text(size = 9, color = "grey25", vjust = 3)
+  ) 
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, fig.width=10, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+
+mapp
+
+```
+
+</div>
+<div class="graph-container" data-graphname="redmapstatic">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+
+<br>
+
+This map portrays the energy used in Kw/h per Capita Worldwide. Darker colored countries are the ones with the highest ratings of energy use per capita (Kw/h).
+
+<br>
+
+## Kwh/Capita Interactive
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+library(tidyverse)
+library(leaflet)
+
+enuse <- read_csv("enuse.csv") |> 
+  rename(enused = `Primary energy consumption per capita (kWh/person)`, 
+         region = Entity, 
+         year = Year, 
+         code = Code ) |> 
+  filter(year == 2021 ) |> 
+  mutate(region = case_when(
+  #region == "United States" ~ "USA",
+  region == "Democratic Republic of Congo" ~ "Democratic Republic of the Congo" ,
+  region == "Congo" ~ "Republic of Congo",
+  region == "Cote d'Ivoire" ~ "Ivory Coast",
+  TRUE ~ region )) |> 
+  mutate(enused = enused / 1000 ) |> 
+  drop_na()
+
+coord <- read_csv("coord.csv")|> 
+  inner_join(enuse, by="region")
+
+
+coord$enused <- round(coord$enused, 2)
+
+
+library(leaflet)
+
+# Create the Leaflet map with working hover tooltips
+leaflet_map <- leaflet(coord) |> 
+  addTiles() |> 
+  addCircleMarkers(
+    lat = ~lat, 
+    lng = ~long, 
+    radius = ~enused / 10,  # Adjust the size of the circle based on the value of enused
+    color = "purple",       # Circle color
+    stroke = FALSE,         # No border around the circle
+    fillOpacity = 0.7,      # Transparency of the circle
+    popup = ~paste(
+      "<strong>Region:</strong>", region, "<br>",
+      "<strong>Energy consumption:</strong>", enused, "thousands of Kw/h per capita"
+    ),                      # Popup on click
+    label = ~paste(
+      "Region:", region, "\n",
+      "Energy consumption:", enused, "thousands of Kw/h per capita"
+    ),                      # Tooltip (hover text) with newline characters
+    labelOptions = labelOptions(
+      style = list("color" = "black"),  # Set the color for hover text
+      textsize = "13px",
+      direction = "auto"
+    )
+  )
+
+# Save the map as an HTML file
+htmlwidgets::saveWidget(leaflet_map, "leaflet_map.html")
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+<iframe src="leaflet_map.html" width="100%" height="600px" style="border:none;">
+</iframe>
+</div>
+<div class="graph-container" data-graphname="redmapinteractive">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to help me rate this graph for my website analytics project.</div></div>
+
+<br>
+
+This is the same map as the first one, difference is the style and formatting. I prefer the first one, but both have their pros.
+
+<br>
+
+## U.S. Most Dense Cities
+
+```{r fig.height=10, fig.width=12, fig.width=10, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(USAboundaries)
+library(dplyr)
+library(sf)
+library(USAboundariesData)
+library(ggrepel)
+
+idahoc <- us_counties(states = "Idaho")
+
+
+cities <- us_cities() %>% 
+  
+  filter(
+    
+    state_name != "Alaska", 
+    
+    state_name != "Hawaii", 
+    
+    state_name != "District of Columbia", 
+    
+    state_name != "Puerto Rico")
+
+
+contstate <- us_states() %>% 
+  
+  filter(name != "Alaska", 
+         
+         name != "Hawaii",
+         
+         name != "District of Columbia", 
+         
+         name != "Puerto Rico")
+
+
+tops <- cities %>% 
+  
+  group_by(state_name) %>% 
+  
+  mutate(rank = round(dense_rank(desc(population)))) %>% 
+  
+  ungroup() %>% 
+  
+  filter(rank <= 3)
+
+
+top1 <- tops %>% 
+  
+  filter(rank ==1) 
+
+map2 <- ggplot() +
+
+  geom_sf(data = contstate, fill = NA, color = "grey50") +  
+  geom_sf(data = tops, mapping = aes(size = population, color = rank), alpha = 0.8) +  
+  
+
+  geom_label_repel(
+    data = subset(tops, rank == 1),
+    mapping = aes(label = city, geometry = geometry),
+    stat = "sf_coordinates",
+    color = "darkblue",
+    size = 5,
+    max.overlaps = 50,
+    fontface = "bold"  
+  ) +
+
+  guides(
+    size = guide_legend(title = "Population (Thousands)", 
+                        override.aes = list(color = "grey50")), 
+    color = guide_legend(title = "City Rank", 
+                         override.aes = list(size = 5))  
+  ) +
+
+
+  scale_color_continuous(
+    breaks = c(1, 2, 3),  
+    limits = c(1, 3)      
+  ) +
+  
+  scale_size_continuous(
+    breaks = seq(20000, 800000, by=200000), 
+    labels = c("200k","400k","600k", "800k" ), 
+    limits = c(200000, 800000)      
+  ) +
+
+
+  labs(
+    title = "Most Densely Populated Cities in the U.S.",
+    subtitle = "Population sizes represented by point size | Population density rank by color (1 most dense)",
+    x = NULL,  
+    y = NULL   
+  ) +
+  
+
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),   
+    axis.text = element_blank(),    
+    axis.ticks = element_blank(),   
+    legend.position = "bottom",     
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold", color = "grey5"),
+    plot.subtitle = element_text(hjust = 0.5, size = 16, color = "grey30"),
+    legend.title = element_text(size = 15, color = "grey15"),
+    legend.text = element_text(size = 13, color = "grey25"),
+  )
+
+
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r fig.height=10, fig.width=12, fig.width=10, echo=FALSE, message=FALSE, warning=FALSE}
+
+map2
+
+```
+
+</div>
+<div class="graph-container" data-graphname="usdensitycity">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+What cities in the U.S. have the highest population density overall?
+
+<br>
+
+## Idaho's Water System
+
+```{r, fig.width=10, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+
+library(sf)
+
+library(ggrepel)
+
+library(USAboundaries)
+
+# Read in all four of the necessary SHP file datasets.
+
+pacman::p_load(downloader, sf, fs, tidyverse)
+
+wellspath <- "https://byuistats.github.io/M335/data/Wells.zip"
+
+df <- tempfile(); uf <- tempfile()
+
+download(wellspath, df, mode = "wb")
+
+unzip(df, exdir = uf)
+
+wells <- read_sf(uf)
+
+file_delete(df); dir_delete(uf)
+
+damspath <- "https://byuistats.github.io/M335/data/Idaho_Dams.zip"
+
+df2 <- tempfile(); uf2 <- tempfile()
+
+download(damspath, df2, mode = "wb")
+
+unzip(df2, exdir = uf2)
+
+dams <- read_sf(uf2)
+
+file_delete(df2); dir_delete(uf2)
+
+waterpath <- "https://byuistats.github.io/M335/data/water.zip"
+
+df3 <- tempfile(); uf3 <- tempfile()
+
+download(waterpath, df3, mode = "wb")
+
+unzip(df3, exdir = uf3)
+
+water <- read_sf(uf3)
+
+file_delete(df3); dir_delete(uf3)
+
+stateshapepath <- "https://byuistats.github.io/M335/data/shp.zip"
+
+df4 <- tempfile(); uf4 <- tempfile()
+
+download(stateshapepath, df4, mode = "wb")
+
+unzip(df4, exdir = uf4)
+
+stateshape <- read_sf(uf4)
+
+file_delete(df4); dir_delete(uf4)
+
+
+ID_counties <- USAboundaries::us_counties(states = "ID")
+
+wellsfiltered <- wells |> 
+
+group_by(WellID) |> 
+
+filter(Production >= 5000)
+
+damsfiltered <- dams |>
+
+filter(SurfaceAre >= 50)
+
+waterfiltered <- water |>
+
+filter(FEAT_NAME %in% c('Snake River', 'Henrys Fork'))
+
+
+mapidaho <- ggplot() +
+
+  geom_sf(data = ID_counties, 
+          fill = "grey99") +
+  
+  geom_sf(data = damsfiltered, 
+          aes(color = "Dams"), 
+          show.legend = TRUE) +
+  
+  geom_sf(data = waterfiltered, 
+          aes(color = "Rivers"), 
+          linewidth = 1, 
+          show.legend = TRUE) +
+  
+  geom_sf(data = wellsfiltered, 
+          aes(color = "Wells"), 
+          show.legend = TRUE) +
+  
+  theme_bw() +
+  
+  coord_sf(crs = st_crs(4267)) +
+  
+  scale_color_manual(
+    name = "Features",
+    values = c(
+      "Rivers" = "steelblue1", 
+      "Dams" = "chocolate", 
+      "Wells" = "darkseagreen4"),
+    labels = c("Rivers", 
+               "Dams", 
+               "Wells")) +
+  
+  theme_minimal() +
+  
+  labs(
+    title = "Idaho's Dams, Wells, and Rivers"
+  ) +
+  
+  theme(
+    
+    panel.grid = element_blank(), 
+    
+    axis.text = element_blank(),  
+    
+    axis.ticks = element_blank(),  
+    
+    legend.position = "right",  
+    
+    plot.title = element_text(hjust = 0.5, 
+                              size = 18, 
+                              face = "bold", 
+                              color = "grey5"),
+    
+    plot.subtitle = element_text(hjust = 0.5, 
+                                 size = 16, 
+                                 color = "grey30"),
+    
+    legend.title = element_text(size = 12, 
+                                color = "grey15"),
+    
+    legend.text = element_text(size = 11, 
+                               color = "grey25")) +
+  
+  guides(
+    color = guide_legend(override.aes = list(size = 4, 
+                                             shape = 16, 
+                                             linetype = NA)))
+
+  
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+
+mapidaho
+  
+```
+
+</div>
+<div class="graph-container" data-graphname="idahomap">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to help me rate this graph for my website analytics project.</div></div>
+
+<br>
+
+A summary of Idaho's key rivers, dams, and wells. Overall Idaho's water system portrayed in a map visualization.
+
+<br>
+

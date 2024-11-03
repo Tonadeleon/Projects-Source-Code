@@ -1,0 +1,270 @@
+---
+title: "Finding an Apartment in Rexburg"
+author: "Tonatiuh De Leon"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Introduction**</strong></p>
+
+This project focuses on assisting a theoretical freshman student **exploring housing options near BYU-Idaho.** She is seeking accommodation that is both conveniently **close to campus and affordable**, with a target rent of approximately **$300 per month**. Additionally, she prefers living in a community-rich environment to facilitate social interactions and build **connections with fellow residents**.
+
+To identify the most suitable renting options, I will conduct a **basic statistical analysis** using a dataset provided by my school, which contains comprehensive housing data for Rexburg, Idaho. By evaluating factors such as proximity to campus, rental costs, and population density, this analysis aims to provide informed recommendations that align with her preferences and budget constraints.
+
+```{r, message=FALSE, warning=FALSE}
+
+library(kableExtra)
+library(mosaic)
+library(tidyverse)
+library(plotly)
+library(pander)
+library(DT) 
+library(scales)
+library(formattable)
+            # If you get an error stating: 
+            # Error in library(DT): there is no package called 'DT'
+            # You will need to run: install.packages("DT") 
+            # in your Console, then try "Knit HTML" again.
+Rent <- read_csv("Rent.csv")
+
+Steph_apt <- Rent %>% filter(AvgFloorPlanCost/4 < 300 & Residents > 75 & Gender == "F") %>%
+  mutate(Price = AvgFloorPlanCost/4)
+
+StephanieRent <- Rent |> 
+  filter(
+    Gender=="F",
+    AvgFloorPlanCost < 1050,
+    Residents > 140,
+    CrowFlyMetersToMC < 630)
+
+```
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**General Overview**</strong></p>
+
+In order to analyze all the women apartments in Rexburg. We will consider how they are distributed by price, number of students, and closeness to Campus. Play around with the graph below. It has all Women apartments in Rexburg. Then continue reading to find the best option for you
+
+<br>
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+<p class="graph-titles" style="font-size: 18px; text-align: center; font-family: Arial, sans-serif; color: #333;"><strong>Rexburg Women Apartments Comparison</strong></p>
+<p class="graph-titles" style="font-size: 14px; text-align: center; font-family: Arial, sans-serif; color: #808080;">The graph works better in desktop version. Toggle through the graph and click on the dots to see more information.</p>
+
+<br>
+
+```{r fig.align='center', fig.height=8, fig.width=8, message=FALSE, warning=FALSE, echo=FALSE}
+Housing <- Rent %>% 
+  filter(Gender == 'F') %>% 
+  mutate(CrowFlyMetersToCenter = round((CrowFlyMetersToMC + CrowFlyMetersToRicks)/2)) %>% 
+  filter(CrowFlyMetersToCenter <= 805) %>% 
+  mutate(AvgCostByMonth = round(AvgFloorPlanCost/3.22)) %>% 
+  filter(AvgCostByMonth <= 350) %>% 
+  rename(Apartment = Name) %>%
+  select(Apartment, Residents, ParkingSpaces, Deposit, CrowFlyMetersToCenter, AvgCostByMonth)  
+
+#favstats(Housing$CrowFlyMetersToCenter)
+
+HousingTable <- Housing %>% 
+  mutate(distance = paste('Distance:', CrowFlyMetersToCenter, '\n')) %>% 
+  mutate(MRent = paste('MonthlyRent:', AvgCostByMonth, '\n')) %>%
+  mutate(RCount = paste('ResidentCount:', Residents)) %>%
+  mutate(apt = paste(Apartment, '\n')) %>% 
+  mutate(HData = paste(apt, distance, MRent, RCount))
+# 
+# plot_ly(
+#   HousingTable,
+#   y= ~AvgCostByMonth, 
+#   x= ~CrowFlyMetersToCenter, 
+#   color= ~-Residents, 
+#   colorscale='viridis',
+#   hovertemplate = paste(
+#     "<b>Housing Information</b><br>",
+#     "Apartment: ", HousingTable$Apartment, "<br>",
+#     "Distance To Campus: ", HousingTable$CrowFlyMetersToCenter, " meters<br>",
+#     "Monthly Rent: ", HousingTable$AvgCostByMonth, "<br>",
+#     "Resident Count: ", HousingTable$Residents
+#   ),
+#   hoverinfo = "text"
+# ) %>%
+# layout(
+#   title="Housing Options within Stephanie's Criteria",
+#   xaxis=list(title="Distance from the center of Campus (meters)"),
+#   yaxis=list(title="Average Cost per Month")
+# )
+
+
+stephss <- plot_ly(
+  data = Rent, 
+  x = ~AvgFloorPlanCost, 
+  y = ~Residents, 
+  z = ~CrowFlyMetersToMC, 
+  type = "scatter3d", 
+  mode = "markers", 
+  marker = list(color = "steelblue"), 
+  hovertemplate = paste(
+    'Apartment complex: ', Rent$Name, '<br>',
+    'Price: ', dollar(Rent$AvgFloorPlanCost), '<br>',
+    'Students: ', Rent$Residents, '<br>',
+    'Distance: ', round(Rent$CrowFlyMetersToMC)),
+  color = I("steelblue")) %>%
+  layout(
+    title = " ",
+    scene = list(
+      xaxis = list(title = "Price"),
+      yaxis = list(title = "Capacity"),
+      zaxis = list(title = "Walking Minutes")),
+    autosize = TRUE  # Ensures responsive resizing
+  )
+
+# Use JavaScript to adjust zoom for mobile devices while keeping it contained
+stephss <- htmlwidgets::onRender(stephss, "
+  function(el, x) {
+    var isMobile = window.innerWidth <= 768; // Mobile screen size threshold
+
+    if (isMobile) {
+      // Adjust camera for mobile (simulate zoom effect)
+      var camera = {
+        eye: {x: 2, y: 2, z: 2} // Adjust for zoom effect
+      };
+      Plotly.relayout(el, 'scene.camera', camera);
+    }
+
+    // Ensure the plot stays responsive and within screen boundaries
+    el.style.width = '100%';  // Ensures plot width stays within screen
+    el.style.height = '100%'; // Keeps height responsive
+    Plotly.Plots.resize(el);  // Trigger resizing
+  }
+")
+
+stephss
+
+
+```
+
+<div class="graph-container" data-graphname="stephinteractive">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div>
+</div>
+</div>
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Summary Statistics**</strong></p>
+
+To continue finding the best option for you, here is table with the statistics of all Rexburg apartments so that you can see what the mean is and see a more realistic approach to your needs.
+
+```{r,warning=F, message = F}
+
+# plot_ly(
+#   data = StephanieRent, 
+#   x=~AvgFloorPlanCost, 
+#   y=~Residents, 
+#   marker=list(color="steelblue"), 
+#   text=paste0(
+#     'Apartment complex: ', StephanieRent$Name, 
+#     '# Price: ', StephanieRent$AvgFloorPlanCost,
+#     ' Students: ', StephanieRent$Residents)) %>% 
+#   layout(
+#     title="Women's Apartments Comparisson", 
+#     xaxis=list(title="Apartment price per semester"), 
+#     yaxis=list(title="Number Of Students In Apartment Complex"))
+
+dt <- Rent |> 
+  filter(Gender == "F")
+
+rbind(
+  Price = favstats(dt$AvgFloorPlanCost)[c("min", "mean", "max")],
+  Capacity = favstats(dt$Residents)[c("min", "mean", "max")],
+  'Walking Minutes' = favstats(dt$CrowFlyMetersToMC)[c("min", "mean", "max")]) |> 
+  mutate(Min = round(mean),
+         Mean = round(mean),
+         Max = round(max)) |> 
+  select(c(Min, Mean, Max)) |> 
+  kable(format = "markdown", align = "c") %>%
+  kable_styling(full_width = FALSE)
+
+```
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Conclusion**</strong></p>
+
+Now, let us only consider those apartments with a price between 800 and 1050, also all those who are below the mean in walking time to campus, and finally those who are above the mean in resident capacity.
+
+<br>
+
+```{r, fig.align='center', warning=F, message=F}
+plot1 <- ggplot(Rent, aes(AvgFloorPlanCost , Residents)) +
+  geom_point(col="steelblue", alpha=.5)+
+  ggrepel::geom_label_repel(data=StephanieRent, aes(label = Name), size = 3, nudge_y = 50, nudge_x = 50 ) +
+    geom_point(data = StephanieRent, aes(AvgFloorPlanCost, Residents), col = "orange", fill="red", size=3.5, show.legend = FALSE) +
+  labs(
+    title = "Possible Housing For You",
+    subtitle = "These apartments are closest to your likes",
+    x="Price ($)",
+    y="Max Number of Students per Semester"
+  ) +
+  theme_minimal()
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, fig.align='center', warning=F, message=F, echo=FALSE, fig.width=10}
+
+plot1
+
+```
+
+</div>
+<div class="graph-container" data-graphname="stephfinalapartments">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+<br>
+
+These apartments are the ones that relate the most to your likes. Here are their statistics, and their information. Please note that there are many other apartments that either have more people, or are closer to campus, however those have been filtered so that only the aprtments with a monthly price of **$250 - $350** monthly, **with the most students as residents,**  and **closest to campus** show.
+
+There are no apartments with exactly $900 rent per semester that meet all the requirements used. However, let me know if you need broader thresholds for any of these requirements (Price, Capacity, Distance), and I'll help you find which apartments fit your needs. 
+
+<br>
+
+```{r, warning=FALSE, message=FALSE}
+
+StephanieRent |> 
+  select(Name, AvgFloorPlanCost, Residents, CrowFlyMetersToMC, Address, Phone) |> 
+  arrange(by=CrowFlyMetersToMC) |> 
+  mutate(Price = dollar(AvgFloorPlanCost),
+         Distance = round(CrowFlyMetersToMC)) |> 
+  select(Name, Price, Residents, Distance) %>%
+  kable(format = "markdown", align = "c") %>%
+  kable_styling(full_width = FALSE)
+
+```
+
+<br>
+
+It's your time to make a choice! I hope you enjoy your time at BYUI friend. Play with the graph below to check out the other apartments!
+
+<br>
+
+---
+Note that this is a hypothetical situation but served to show basic analytical skills
+---
+
+<br><br><br><br>

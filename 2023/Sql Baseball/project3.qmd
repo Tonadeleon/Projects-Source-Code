@@ -1,0 +1,380 @@
+---
+title: "Client Report - [Insert Project Title]"
+subtitle: "Course DS 250"
+author: "[STUDENT NAME]"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+## Elevator pitch
+
+> After analyzing the airport data on delays, we see that the San Francisco has the most delays in general and proportionally compared to other airports. There is the chance that this is because of bad weather. Other airports appear to be delayed above the industry mean.
+
+## Data:
+```{python}
+
+# Load Libraries, Connect -----------------
+import pandas as pd 
+import numpy as np
+import sqlite3
+import plotly.express as px
+from IPython.display import display, HTML
+
+sqlite_file = 'lahmansbaseballdb.sqlite'
+con = sqlite3.connect(sqlite_file)
+
+```
+
+**URL:** [Download Database](https://byuistats.github.io/DS250-Course/Data/lahmansbaseballdb.sqlite)
+
+**Information:** [Data Description](https://byuistats.github.io/DS250-Course/Data/readme2014.txt)
+
+<br>
+
+## BYU-I Players
+
+```{python}
+
+# BYU-I Players ------------------------------
+q = """SELECT
+    cp.playerID,
+    sc.schoolID,
+    s.salary,
+    s.yearID,
+    s.teamID
+FROM 
+    CollegePlaying cp
+INNER JOIN 
+    Schools sc ON cp.schoolID = sc.schoolID
+INNER JOIN 
+    Salaries s ON cp.playerID = s.playerID
+WHERE 
+    sc.name_full LIKE '%Brigham Young University-Idaho%'
+ORDER BY 
+    s.salary DESC;""" 
+
+results = pd.read_sql_query(q,con)
+results
+
+```
+
+## Top 5 Players by Batting Average
+
+```{python}
+
+# Query 1 ------------------------------------
+q = """
+SELECT 
+    b.playerID,
+    b.yearID,
+    CAST(b.H AS FLOAT) / NULLIF(b.AB, 0) AS batting_average
+FROM 
+    Batting b
+WHERE 
+    b.AB >= 1
+ORDER BY 
+    batting_average DESC,
+    b.playerID ASC
+LIMIT 5;
+"""
+
+results = pd.read_sql_query(q,con)
+results
+
+```
+
+<br>
+
+## Top 5 Players with at Least 10 at Bats that Year
+
+```{python}
+
+# Query 2 ------------------------------------
+q = """
+SELECT 
+    b.playerID,
+    b.yearID,
+    CAST(b.H AS FLOAT) / NULLIF(b.AB, 0) AS batting_average
+FROM 
+    Batting b
+WHERE 
+    b.AB >= 10
+ORDER BY 
+    batting_average DESC,
+    b.playerID ASC
+LIMIT 5;"""
+
+results = pd.read_sql_query(q,con)
+results
+
+```
+
+<br>
+
+## Top 5 Players by Batting Average
+
+> Comparing career averages; only players with more than 100 at bats considered.
+
+```{python}
+
+# Query 3 ------------------------------------
+q = """
+SELECT 
+    b.playerID,
+    SUM(b.H) AS total_hits,
+    SUM(b.AB) AS total_at_bats,
+    CAST(SUM(b.H) AS FLOAT) / NULLIF(SUM(b.AB), 0) AS career_batting_average
+FROM 
+    Batting b
+GROUP BY 
+    b.playerID
+HAVING 
+    SUM(b.AB) >= 100
+ORDER BY 
+    career_batting_average DESC
+LIMIT 5;"""
+
+results = pd.read_sql_query(q,con)
+results
+
+```
+
+<br>
+
+## Teams Comparison
+
+> By comparing the New York Yankees and the Boston Red Sox, we can tell that over the years that this dataset spans, the Yankees have payed more in average to their players.
+
+```{python}
+
+# Query  -------------------------------------
+query_compare_teams = """
+SELECT 
+    t.teamID,
+    AVG(s.salary) AS average_salary
+FROM 
+    Salaries s
+JOIN 
+    Teams t ON s.teamID = t.teamID
+WHERE 
+    t.teamID IN ('NYA', 'BOS')
+GROUP BY 
+    t.teamID;
+"""
+
+df_compare = pd.read_sql_query(query_compare_teams, con)
+
+df_display = pd.read_sql_query(query_compare_teams, con)
+
+# Formatting Display Table -------------------
+def format_millions(value):
+    if pd.isna(value):
+        return "N/A"
+    return f"{value / 1_000_000:.1f}M"
+
+df_display['average_salary'] = df_display['average_salary'].apply(format_millions)
+
+html_table = df_display.to_html(
+    index=False, 
+    classes='table table-striped', 
+    border=0,
+    escape=False
+)
+
+display(HTML(html_table))
+
+```
+
+<br>
+
+```{python}
+
+# Plotting -----------------------------------
+df_compare['average_salary_millions'] = df_compare['average_salary'] / 1_000_000
+
+custom_colors = ['#1f77b4', '#ff7f0e'] 
+
+fig_compare = px.bar(
+    df_compare,
+    x='teamID',
+    y='average_salary_millions',
+    color='teamID',
+    title='<b>Average Player Salaries: NYA vs BOS</b>',
+    labels={
+        'teamID': 'Team ID',
+        'average_salary_millions': 'Average Salary (in Millions USD)'
+    },
+    hover_data={
+        'average_salary_millions': ':.2f'
+    },
+    color_discrete_sequence=custom_colors
+)
+
+tick_vals = [i * 0.5 for i in range(int(df_compare['average_salary_millions'].max() * 2) + 2)]
+tick_text = [f"{val}M" for val in tick_vals]
+
+fig_compare.update_layout(
+    plot_bgcolor='white', 
+    xaxis=dict(
+        title='Team ID',
+        zeroline=True,
+        zerolinewidth=1,
+        zerolinecolor='LightGray'
+    ),
+    yaxis=dict(
+        title='Average Salary (in Millions USD)',
+        tickmode='linear',
+        tick0=0,
+        dtick=0.5,
+        tickformat='.1f',
+        ticksuffix='M',
+        zeroline=True,
+        zerolinewidth=1,
+        zerolinecolor='LightGray',
+        range=[0, df_compare['average_salary_millions'].max() * 1.1]
+    ),
+    title_font_size=24,
+    title_x=0.5,
+    title_y=.94,
+    showlegend=False
+)
+
+fig_compare.update_traces(
+    hovertemplate="<b>%{x}</b><br>Average Salary: %{y:.2f}M USD"
+)
+
+fig_compare.show()
+
+
+
+```
+
+## Stretch Challenge
+
+> It looks like overall the 1^st^ Base players have the highest earning average in the MLS.
+>
+> But it is the Pitchers and 3^rd^ Base players that have the historical highest payed players overall.
+
+```{python}
+
+# Query --------------------------------------
+query_salary_distribution = """
+SELECT 
+    f.POS AS position,
+    ROUND(AVG(s.salary), 2) AS average_salary,
+    COUNT(DISTINCT f.playerID) AS total_players,
+    ROUND(MAX(s.salary), 2) AS highest_salary
+FROM 
+    Fielding f
+INNER JOIN 
+    Salaries s ON f.playerID = s.playerID AND f.yearID = s.yearID
+GROUP BY 
+    f.POS
+ORDER BY 
+    average_salary DESC;
+"""
+
+df_salary_distribution = pd.read_sql_query(query_salary_distribution, con)
+
+# Formatting Display Table -------------------
+def format_millions(value):
+    if pd.isna(value):
+        return "N/A"
+    return f"{value / 1_000_000:.1f}M"
+
+df_salary_distribution['average_salary'] = df_salary_distribution['average_salary'].apply(format_millions)
+df_salary_distribution['highest_salary'] = df_salary_distribution['highest_salary'].apply(format_millions)
+
+html_table = df_salary_distribution.to_html(
+    index=False, 
+    classes='table table-striped', 
+    border=0,
+    escape=False
+)
+
+display(HTML(html_table))
+
+```
+
+<br>
+
+```{python}
+
+# Plotting -----------------------------------
+df_plot = pd.read_sql_query(query_salary_distribution, con)
+
+df_plot['average_salary_millions'] = df_plot['average_salary'] / 1_000_000
+
+fig_salary = px.bar(
+    df_plot, 
+    x='position', 
+    y='average_salary_millions',
+    title='<b>Average Salary Distribution by Position</b>',
+    labels={
+        'position': 'Position',
+        'average_salary_millions': 'Average Salary (in Millions USD)'
+    },
+    hover_data={
+        'position': False,
+        'average_salary_millions': ':.2f'
+    },
+    color_discrete_sequence=['#636EFA']
+)
+
+tick_vals = [i * 0.5 for i in range(int(df_plot['average_salary_millions'].max() * 2) + 2)]
+tick_text = [f"{val}M" for val in tick_vals]
+
+fig_salary.update_layout(
+    xaxis=dict(
+        title='Position',
+        zeroline=True,
+        zerolinewidth=1,
+        zerolinecolor='LightGray',
+        range=[-0.5, len(df_plot['position']) - 0.5]
+    ),
+    yaxis=dict(
+        title='Average Salary (in Millions USD)',
+        tickmode='linear',
+        tick0=0,
+        dtick=0.5,
+        tickformat='.1f',
+        ticksuffix='M',
+        zeroline=True,
+        zerolinewidth=1,
+        zerolinecolor='LightGray',
+        range=[0, df_plot['average_salary_millions'].max() * 1.1]
+    ),
+    plot_bgcolor='white',
+    title_font_size=24,
+    title_x=0.5,
+    title_y=.95,
+    showlegend=False
+)
+
+fig_salary.update_traces(
+    hovertemplate="<b>%{x}</b><br>Average Salary: %{y:.2f}M USD"
+)
+
+fig_salary.show()
+
+
+```

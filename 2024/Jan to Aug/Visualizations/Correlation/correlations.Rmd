@@ -1,0 +1,1225 @@
+---
+title: "Correlation Graphs"
+author: "Tonatiuh De Leon"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+<br>
+
+### Introduction
+
+> This section of my portfolio contains **Dot Plots & Time Series Style Graphs** I've created throughout the years. Take a look at them! I created each graph from scratch in R, check out the code with the `show` buttons to the top right of each graph.
+
+
+# {.tabset .tabset-fade .tabset-pills}
+
+## Most Used Planes in NYC
+
+```{r message=FALSE, warning=FALSE, fig.width=10.5, fig.align='center'}
+library(tidyverse)
+library(nycflights13)
+library(ggridges)
+library(viridis)
+library(ggrepel)
+
+planes1 <- planes %>% 
+  select(-c(speed,engine))
+
+flights1 <- flights %>% 
+  select(-c(month, day, time_hour))
+
+good1 <- flights1 %>% 
+  right_join(planes1, by = "tailnum") %>% 
+  right_join(airlines, by = "carrier") %>% 
+  mutate("age"=year.x-year.y) %>% 
+  mutate("ages" = case_when(
+    age <= 10 ~ "0-10",
+    age <= 20 ~ "11-20",
+    age <= 30 ~ "21-30",
+    TRUE ~ ">30"
+  )) %>%
+  mutate(ages = factor(ages, levels = c("0-10", "11-20", "21-30", ">30"))) %>%
+  select(carrier, name, age, ages, distance, dep_delay, tailnum, model)
+
+goodm <- good1 %>% 
+  group_by(ages,carrier) %>% 
+  summarise(mdlay = mean(dep_delay))
+
+good <- good1 %>% 
+  group_by(tailnum) %>% 
+  summarise(
+    distance= sum(distance)) %>% 
+  right_join(good1, by = "tailnum") %>% 
+  select(-distance.y) %>% 
+  rename(distance = distance.x) %>% 
+  group_by( tailnum, carrier, ages, distance, model) %>% 
+  summarise() %>% 
+  group_by(model, ages) %>% 
+  summarise(distance=mean(distance))
+
+top1s <- good %>%
+  group_by(ages) %>%
+  top_n(3, distance) %>%
+  arrange(ages, -distance)
+
+custom_labels <- c("0-10 Years", "11-20 Years", "21-30 Years", ">30 Years")
+custom_labeller <- function(variable, value) {
+  return(custom_labels[value])
+}
+
+options(scipen = 999)
+
+library(scales)  
+
+planesplotted <- 
+  ggplot(good, aes(model, distance, col = distance, size = distance)) + 
+  geom_point(show.legend = c(color = TRUE, size = FALSE)) +
+  
+  facet_wrap(vars(ages), nrow = 1, labeller = labeller(ages = custom_labeller)) +
+  
+ scale_color_viridis(
+    option = "G", 
+    direction = -1,
+    labels = label_number(scale = 1/1000, suffix = "K", accuracy = 1)  # Divide by 1000 and add "K"
+  ) +
+  
+  scale_y_continuous(
+    trans = "sqrt", 
+    breaks = seq(1000, 1000000, by = 100000), 
+    labels = c("100K", "200K", "300K", "400K", "500K", "600K", "700K", "800K", "900K", "1M")
+  ) +
+  
+  geom_label_repel(
+    data = top1s, 
+    aes(label = model), 
+    color = "grey25", 
+    show.legend = FALSE
+  ) +
+  
+  theme_bw() +
+  
+  labs(
+    y = "Average Distance per Model (Mi)",
+    x = "Age Groups",
+    title = "Most Used Airplane Models by Plane Longevity",
+    color = "Distance",
+    caption = "NYC Airport Data for 2013"
+  ) +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2), 
+    axis.text.y = element_text(color = "grey35", size = 11),
+    axis.text.x = element_blank(),
+    axis.title = element_text(color = "grey20", size = 12),
+    axis.ticks = element_blank(),
+    plot.title = element_text(size = 15, color = "grey5", hjust = 0.5),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(size = 12, angle = 0, colour = "white", face = "bold"),
+    strip.background = element_rect(colour = "black", fill = "steelblue")
+  )
+
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, message=FALSE, warning=FALSE, fig.width=10.5, fig.align='center', echo=FALSE}
+
+planesplotted
+
+```
+
+</div>
+<div class="graph-container" data-graphname="oldplanesnyc">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+This dataset comes from NYC airport records from 2013. As you can see, there are always some models that are used more per decade in the industry. Specially the 700 models have been very popular for a while.
+
+<br>
+
+## Stock Portfolio Comparison
+
+```{r, fig.width=10, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidyquant)
+
+top_port <- c("NVDA","TSLA", "AMZN")
+
+price_data <- tq_get(top_port,
+                     get = "stock.prices",
+                     from = "2023-10-01") 
+
+return_data <- price_data %>% 
+  group_by(symbol) %>% 
+  tq_transmute(select = adjusted,
+               mutate_fun = periodReturn,
+               period = "daily",
+               type = "log") 
+
+tona <- return_data %>% 
+  tq_portfolio(assets_col=symbol,
+               returns_col=daily.returns,
+               weights = tibble(asset.names = c("NVDA","TSLA", "AMZN"), 
+                                weight = c(0.333, 0.333, 0.334)),
+               wealth.index = T) %>% 
+  mutate(Portfolio = "Tona")
+
+
+
+top_port1 <- c("META","AAPL", "MSFT")
+
+price_data <- tq_get(top_port1,
+                     get = "stock.prices",
+                     from = "2023-10-01") 
+
+return_data1 <- price_data %>% 
+  group_by(symbol) %>% 
+  tq_transmute(select = adjusted,
+               mutate_fun = periodReturn, 
+               period = "daily",
+               type = "log") 
+
+ammon <- return_data1 %>% 
+  tq_portfolio(assets_col=symbol,
+               returns_col=daily.returns,
+               weights = tibble(asset.names = c("META","AAPL", "MSFT"), 
+                                weight = c(0.333, 0.333, 0.334)),
+               wealth.index = T) %>% 
+  mutate(Portfolio = "Friend")
+
+
+combined_data <- rbind(tona, ammon)
+
+
+stocked <- ggplot(combined_data, aes(x = date, 
+                          y = portfolio.wealthindex, 
+                          color = Portfolio)) +
+  geom_line(linewidth = 1) + 
+  
+  scale_color_manual(
+    values = c("Tona" = "orange",
+               "Friend" = "steelblue"
+  )) +
+  
+  labs(title = "Comparison of Portfolios",
+       x = "Time Period",
+       y = "Wealth Index",
+       color = "Portfolio",
+       caption="Stock Data From Open Source Tidyquant R Library") +
+  
+  theme_classic() +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2), 
+    axis.text.y =
+      element_text(color="grey25",size=10.5),
+    
+    axis.text.x = 
+      element_text(color="grey25", size=10.5),
+    
+    axis.title = 
+      element_text(color="grey15", size=12),
+    
+    axis.ticks = 
+      element_blank(),
+    
+    plot.title = 
+      element_text(size=14,
+                   color="grey5", 
+                   hjust = .5,
+                   face = "bold"),
+    plot.caption = 
+      element_text(size=10,
+                   color="grey15"),
+    
+    legend.text = element_text(size = 10.5,
+                               color = "grey25"),
+
+    legend.title = element_text(size = 12,
+                               color = "grey15"),
+    
+    panel.grid.major = 
+      element_blank(),
+    
+    panel.grid.minor.x = 
+      element_blank(),
+    
+    panel.grid = 
+      element_blank(),
+    
+    strip.text = 
+      element_text(size = 12, 
+                   face="bold", 
+                   angle = 0, 
+                   colour = "white"),
+    
+    strip.background = 
+      element_rect(colour = "steelblue", 
+                   fill = "steelblue")) #+
+  
+  # guides(
+  #   color = guide_legend(
+  #     title = "Continent",
+  #     override.aes = list(size = 4)))
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+
+stocked 
+
+```
+
+</div>
+<div class="graph-container" data-graphname="friendvsmestock">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+A friend and I picked 3 stocks each for fun. The historical data was gotten from R's tidyquant API. We compared our picked stocks growth over a period of time to see who would have gotten a better return on their investments.
+
+My picks were higher after June 2024, mostly highly volatile. In the end my picks ended up being higher in returns, not by much.
+
+The picks were as follows.
+
+**Tona:**
+`"NVDA"`
+`"TSLA"`
+`"AMZN"`
+
+**Friend:**
+`"META"`
+`"AAPL"`
+`"MSFT"`
+
+<br>
+
+## GDP per Capita
+
+```{r fig.align='center', fig.height = 8, fig.width=12, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(gapminder)
+
+#Removes Kuwait and makes pop in the thousands
+gapminder1 <- gapminder%>%
+  
+  filter(country != "Kuwait") %>% 
+  
+  mutate(pop = pop/1000000)
+
+#New Data set with weighted
+gapped <- gapminder1 %>% 
+  group_by(year, continent) %>% 
+  summarise(
+      GDP = weighted.mean(gdpPercap, pop, na.rm=T),
+      pop= pop)
+
+#create base plot with countries
+percapita <- ggplot(data = gapminder1, mapping = aes(x = year, y = gdpPercap, col = continent)) +
+  
+  geom_point(alpha=.05, color="grey65", 
+             show.legend = c( size = T,
+                              color = F)) +
+  
+  geom_line(aes(group=country), color="grey80",
+            show.legend = c( size = T,
+                              color = F),
+            alpha = .7) +
+  
+                   #add weighted mean points and lines
+  
+  geom_point(data = gapped, 
+             mapping = aes(x = year, 
+                           y = GDP, 
+                           size=pop,
+                           color=continent), 
+             show.legend = c( size = T,
+                              color = F)) +
+  
+  scale_y_continuous(breaks = 
+                       seq(0, 50000, by = 10000),
+                     labels = 
+                       c("0",
+                         "10k",
+                         "20k",
+                         "30k",
+                         "40k",
+                         "50k")) +
+  scale_x_continuous(breaks = 
+                       seq(1950, 2030, by = 20),
+                     labels = 
+                       c("1950",
+                         "1970",
+                         "1990",
+                         "2010",
+                         "2030")) +
+  
+  geom_line(data=gapped, 
+            mapping = aes(x=year, 
+                          y=GDP, 
+                          group=continent,
+                           color=continent), 
+             show.legend = c( size = T,
+                              color = F),
+            linewidth = 1.2) +
+  
+                   #separate graphs by continent
+  
+  facet_wrap(vars(continent), ncol = 5)+
+  
+                   #labels and them
+  
+  labs(
+    x= "Year",
+    y= "GDP per capita in $USD",
+    title= "GDP per Capita by Continent | Population Growth",
+    subtitle="Colored Lines Represent Continents' Weighted Average GDP per Capita\nGrey Lines Represent Each Country's GDP per Capita",
+    size = "Population (M)")+
+  theme_bw() +
+
+  scale_color_manual(
+    values = c(
+      "chocolate", "orange", "darkseagreen", "steelblue", "skyblue2"
+    )
+  ) +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2),   
+    axis.text.y =
+      element_text(color="grey25",size=10.5),
+    
+    axis.text.x = 
+      element_text(color="grey25", size=10.5),
+    
+    axis.title = 
+      element_text(color="grey15", size=12),
+    
+    axis.ticks = 
+      element_blank(),
+    
+    plot.title = 
+      element_text(size=14,
+                   color="grey5", 
+                   hjust = .5),
+    plot.caption = 
+      element_text(size=10,
+                   color="grey15"),
+    
+    panel.grid.major = 
+      element_blank(),
+    
+    panel.grid.minor.x = 
+      element_blank(),
+    
+    strip.text = 
+      element_text(size = 12, 
+                   face="bold", 
+                   angle = 0, 
+                   colour = "white"),
+    
+    strip.background = 
+      element_rect(colour = "steelblue", 
+                   fill = "steelblue"))
+
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r fig.align='center', fig.height = 8, fig.width=12, message=FALSE, warning=FALSE, echo=FALSE}
+
+percapita
+
+```
+
+</div>
+<div class="graph-container" data-graphname="gapminder1">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+This is GPD per capita growth over time. The data comes from the worldwide known gapminder dataset. I've loved working with it so, I created a couple ways to get insights from the data.
+
+In both of them the colored lines represent the weighted average of the entire continent. The first one has grey lines representing each country by year.
+
+The differences between the two is that the first one is able to give an idea of how largely populated a country is, and also give a broad image of how may countries in each country there are.
+
+Accounting for this information is key for a couple reasons.
+
+The visual is less misleading. If you were to compare these lines in the same graph instead of grouping them by country; Oceania would be at the very top of GDP growth. 
+
+However, it is only considering two countries, which are lowly populated. Not accounting for this in a non-standardized way could mislead the audience.
+
+<br>
+
+```{r fig.align='center', message=FALSE, warning=FALSE, fig.width=11}
+percapita2 <- ggplot() +
+  # Plot points with size and color legends
+  geom_point(
+    data = gapped, 
+    mapping = aes(
+      x = year, 
+      y = GDP, 
+      size = pop,
+      color = continent
+    ), 
+    show.legend = c(size = TRUE, color = TRUE)
+  ) +
+  
+  scale_y_continuous(
+    breaks = seq(0, 50000, by = 10000),
+    labels = c("0", "10k", "20k", "30k", "40k", "50k")
+  ) +
+  
+  geom_line(
+    data = gapped, 
+    mapping = aes(
+      x = year, 
+      y = GDP, 
+      group = continent,
+      color = continent
+    ), 
+    show.legend = c(size = TRUE, color = FALSE),
+    linewidth = 1.2
+  ) +
+  
+  scale_color_manual(
+    values = c(
+      "chocolate", "orange", "darkseagreen", "steelblue", "skyblue2"
+    )
+  ) +
+  
+  # Adjust the legend to make color circles larger
+  guides(
+    color = guide_legend(
+      title = "Continent",
+      override.aes = list(size = 4)  # Increase the size of color legend circles
+    ),
+    size = guide_legend(
+      title = "Population (M)"
+    )
+  ) +
+  
+  # Labels and themes
+  labs(
+    x = "Year",
+    y = "GDP per capita in $USD",
+    title= "GDP per Capita by Continent | Population Growth",
+  ) +
+  
+  theme_classic() +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2), 
+    axis.text.y = element_text(color = "grey25", size = 10.5),
+    
+    axis.text.x = element_text(color = "grey25", size = 10.5),
+    
+    axis.title = element_text(color = "grey15", size = 12),
+    
+    axis.ticks = element_blank(),
+    
+    plot.title = element_text(size = 14, color = "grey5", hjust = 0.5),
+    
+    panel.grid.major = element_blank(),
+    
+    panel.grid.minor.x = element_blank(),
+    
+    strip.text = element_text(size = 12, face = "bold", angle = 0, colour = "white"),
+    
+    strip.background = element_rect(colour = "steelblue", fill = "steelblue")
+  )
+  
+```
+
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+<p class="graph-titles" >
+
+```{r fig.align='center', message=FALSE, warning=FALSE, fig.width=11, echo=FALSE}
+
+percapita2
+
+```
+
+</div>
+<div class="graph-container" data-graphname="gapminder122">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+Above is an example of what I was mentioning above, however anyone can choose which of these examples is the better one. 
+
+As for me, I enjoyed making both of them!
+
+<br>
+
+## Life Expectancy vs GDP
+
+```{r, fig.width = 12, fig.height = 8, fig.align='center'}
+
+library(tidyverse)
+library(gapminder)
+
+gapminder1 <- gapminder |> 
+  filter(country != "Kuwait") |>  
+  mutate(pop = pop/1000000)
+
+gap2 <- ggplot(data = gapminder1, 
+       mapping = aes(x=lifeExp, 
+                     y=gdpPercap, 
+                     col=continent, 
+                     size=pop)) +
+  
+  geom_point() +
+  
+  scale_y_continuous(trans="sqrt", 
+                     breaks = seq(10000,
+                                  50000, 
+                                  by=10000), 
+                     labels = 
+                       c("$10,000", 
+                         "$20,000", 
+                         "$30,000", 
+                         "$40,000",
+                         "$50,000"))+
+  
+  theme_bw() +
+  
+  facet_wrap(vars(year), ncol=12)+
+  
+  labs(
+    x="Life Expectancy in Years",
+    title = "GDP per Capita vs Life Expectancy by Year | Continent | Population Size",
+    y="GDP per Capita in $USD",
+    size="Population (M)",
+    color="Continent",
+    caption="Data From the Gapminder Library"
+  ) +
+  
+  scale_color_manual(
+    values = c(
+      "chocolate", "orange", "darkseagreen", "steelblue", "skyblue2"
+    )
+  ) +
+  
+  theme_bw() +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2),   
+    axis.text.y =
+      element_text(color="grey25",size=10.5),
+    
+    axis.text.x = 
+      element_text(color="grey25", size=10.5),
+    
+    axis.title = 
+      element_text(color="grey15", size=12),
+    
+    axis.ticks = 
+      element_blank(),
+    
+    plot.title = 
+      element_text(size=14,
+                   color="grey5", 
+                   hjust = .5),
+    plot.caption = 
+      element_text(size=10,
+                   color="grey15"),
+    
+    panel.grid.major = 
+      element_blank(),
+    
+    panel.grid.minor.x = 
+      element_blank(),
+    
+    panel.grid = 
+      element_blank(),
+    
+    strip.text = 
+      element_text(size = 12, 
+                   face="bold", 
+                   angle = 0, 
+                   colour = "white"),
+    
+    strip.background = 
+      element_rect(colour = "steelblue", 
+                   fill = "steelblue")) +
+  
+  guides(
+    color = guide_legend(
+      title = "Continent",
+      override.aes = list(size = 4)))
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, fig.width = 12, fig.height = 8, fig.align='center', echo=FALSE}
+
+gap2
+
+```
+
+</div>
+<div class="graph-container" data-graphname="gapminder2">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+
+<br>
+
+Coming from the same data set than the GDP by year graph, we get new insights on the data. Is GDP a factor for longer life expectancy worldwide? 
+
+If so, we'll see more developed continents (grouped by color) closer to the top of the graphs each year. Are largely populated countries likely to have a lower life expectancy rate? or is this a "big-sample-size vs small-sample-size effect" playing with the data.
+
+Many insights can be brought to life with this dataset, the truth is I enjoyed working with this.
+
+<br>
+
+## German Height
+
+```{r fig.width=10.5, message=FALSE, warning=FALSE, fig.align='center'}
+
+library(tidyverse)
+library(readxl)
+library(downloader)
+
+WorldHeight <- read_excel("height.xlsx", skip=2)
+
+## wrangle
+WHClean <- WorldHeight |>
+  pivot_longer(cols = 3:ncol(WorldHeight), 
+               names_to = "year_decade", 
+               values_to = "height") |>
+  drop_na()
+
+WHMed <- WHClean |> 
+    group_by(year_decade ) |> 
+  summarise(
+    decadeMedian = median(height))
+
+GermH <- WHClean |>
+  filter(`Continent, Region, Country` %in% 
+            c("Federal Republic of Germany (until 1990)",
+              "Germany")) |>
+  group_by(year_decade ) |> 
+  summarise(
+    decadeMedian = median(height))
+
+german <- ggplot() +
+  
+  geom_line(data = WHMed, 
+            aes(x = year_decade, 
+                y = decadeMedian, 
+                group = "WHMed"), 
+            color = "grey", 
+            size = 0.7, 
+            show.legend = TRUE) +
+  
+  geom_point(data = WHMed, 
+             aes(x = year_decade, 
+                 y = decadeMedian, 
+                 color = "World"), 
+             size = 3, 
+             show.legend = TRUE) +
+  
+  geom_line(data = GermH, 
+            aes(x = year_decade, 
+                y = decadeMedian, 
+                group = "GermH"), 
+            color = "grey85", 
+            linewidth = 1.2, 
+            show.legend = TRUE) +
+  
+  geom_point(data = GermH, 
+             aes(x = year_decade, 
+                 y = decadeMedian, 
+                 color = "German"), 
+             size = 4, 
+             show.legend = TRUE) +
+  
+  labs(
+    x = "Decade",
+    y = "Height in Cm",
+    title = "German Height Compared to the World's Height (medians)",
+    caption = "Data From Multiple Sources. Spanning From 1810 Through 1980") +
+  
+  scale_color_manual(values = 
+                       c("World" = "grey65", 
+                         "German" = "orange"), 
+                     name = "Population") +
+
+  
+  theme_classic() +
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2), 
+    legend.position = "right",
+    plot.title = 
+      element_text(size=14,
+                   face="bold",
+                   color="grey5",
+                   hjust=.5),
+    axis.title = 
+      element_text(size=12,
+                   color="grey15"),
+    axis.text = 
+      element_text(size=11,
+                   color="grey25"),
+    legend.title = 
+      element_text(size=12,
+                   color="grey15"),
+    legend.text = 
+      element_text(size=11,
+                   color="grey25")
+    )
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r fig.width=10.5, message=FALSE, warning=FALSE, fig.align='center', echo=FALSE}
+german
+
+```
+
+</div>
+<div class="graph-container" data-graphname="germanheight">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+This is a simple time series of height over time (Germany Mean vs World Mean). I would like to state that the fact that there is an uptrend in both lines does not mean that humans are getting indefinitely taller. I chose Germany because they are known to be overall taller than average.
+
+This may be because of the way the data was gathered. It is a compilation of datasets found in kaggle.
+
+That being said, I enjoyed working on this graph, choosing the colors, and making it look clean.
+
+<br>
+
+## Baseball Star Salaries
+
+```{r  fig.width=10, message=FALSE, warning=FALSE, fig.align='center'}
+
+library(tidyverse)
+library(Lahman)
+library(ggrepel)
+library(MASS)
+library(priceR)
+library(viridis)
+
+# Redirect all output to a temporary file
+sink(tempfile())
+
+# Run the data processing and plotting inside invisible(capture.output())
+invisible(capture.output({
+
+  # Combine all data and adjust for inflation
+  pl.info <- People %>% 
+    inner_join(CollegePlaying, by = "playerID") %>% 
+    inner_join(Schools, by = "schoolID") %>% 
+    filter(state == "UT") %>% 
+    dplyr::select(playerID, birthYear, nameGiven, weight, height, name_full) %>% 
+    inner_join(Salaries, by = "playerID") %>% 
+    rename("year" = yearID) %>% 
+    mutate(group = case_when(
+      year <= 2000 ~ 0,
+      year > 2000 & year <= max(year) ~ 1
+    )) %>% 
+    mutate(inflation = adjust_for_inflation(
+      price = salary, from_date = year, 
+      country = "US", 
+      to_date = 2021))
+
+  # Subset of players
+  pl2 <- pl.info %>% 
+    filter(group == 1)
+
+  # Calculate median salaries
+  median_salaries <- pl.info %>%
+    group_by(name_full) %>%
+    summarise(median_salary = median(salary)) %>%
+    arrange(desc(median_salary))
+
+  # Set factor levels based on median salaries
+  pl.info$name_full <- factor(pl.info$name_full, levels = median_salaries$name_full)
+
+  # Get player with the highest salary
+  player_highest_salary <- pl.info %>%
+    filter(inflation == max(inflation)) %>%
+    dplyr::select(playerID, name_full, inflation, year)
+
+  # Filter out data for labeling
+  label_data <- pl.info %>%
+    filter(name_full != player_highest_salary$name_full)
+
+  # Compute overall median
+  overallmn <- median(pl.info$salary)
+
+  # Group data
+  gro <- pl.info %>% 
+    group_by(nameGiven, name_full, year, salary, inflation) %>% 
+    summarise()
+  
+  gro <- gro |> 
+    mutate(name_full = case_when(
+      name_full == "Brigham Young University" ~ name_full,
+      name_full == "Dixie State College of Utah" ~ name_full,
+      TRUE ~ "Others (All of Utah)"))
+
+
+
+#custom_labels <- c("0-10 Years", "11-20 Years", "21-30 Years", ">30 Years")
+#custom_labeller <- function(variable, value) {
+  #return(custom_labels[value])
+#}
+
+baseball <- ggplot(gro, aes(year, inflation, col=inflation, size=inflation)) + 
+  geom_point(show.legend = F)+
+  facet_wrap(vars(name_full), nrow = 1)+
+#, labeller = labeller(ages = custom_labeller))+
+
+  scale_color_viridis(option = "cividis", direction = 1)+
+  
+  scale_y_continuous( breaks = seq(500000,10500000, by=2000000), labels = c(".5", "2.5", "4.5", "6.5", "8.5","10.5"))+
+  
+  geom_label_repel(data = player_highest_salary, aes(label = "Let's ask this guy\n for a tuition donation"), direction = "x", nudge_x = -50,size=3, col="black", fill="white")+
+  
+  theme_bw()+
+  labs(
+    y="Salary in $ Millions (adjusted for 2021)",
+    x="Year",
+    title = "Baseball Stars Salaries After College by Alma Mater"
+  )+
+  
+  theme(
+    plot.background = element_rect(color = "grey90", fill = NA, size = 2), 
+    
+    axis.text.y =
+      element_text(color="grey25",size=10.5),
+    
+    axis.text.x = 
+      element_text(color="grey25", size=10.5),
+    
+    axis.title = 
+      element_text(color="grey15", size=12),
+    
+    axis.ticks = 
+      element_blank(),
+    
+    plot.title = 
+      element_text(size=14,
+                   color="grey5", 
+                   hjust = .5),
+    
+    panel.grid.major = 
+      element_blank(),
+    
+    panel.grid.minor.x = 
+      element_blank(),
+    
+    strip.text = 
+      element_text(size = 12, 
+                   face="bold", 
+                   angle = 0, 
+                   colour = "white"),
+    
+    strip.background = 
+      element_rect(colour = "steelblue", 
+                   fill = "steelblue"))
+
+}))
+
+# Restore normal output
+sink()
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r  fig.width=10, message=FALSE, warning=FALSE, fig.align='center', echo=FALSE}
+
+baseball
+
+```
+
+</div>
+<div class="graph-container" data-graphname="basebaldotplot">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+Similarly to the distribution plot on this same data in my other tabs; Given that here are only very few players per university we wouldn't be able to say if the school in which they studied really had a big impact in their salary. Some of those schools are probably not competitive in baseball, so it would make sense that they don't have high ranking players.
+
+However if we only focus on Dixie and BYU (both schools having a large sample size) then we see that their salaries more evenly distributed if we consider Dixie having a lot less baseball stars.
+
+The only assumption I would take here based on these graphs, is that Dixie and BYU are big baseball competitors and have had great baseball players throughout the years. Their baseball program should be good. It would be cool to compare the best colleges in baseball to see their distributions across country or world.
+
+<br>
+
+## House Prices Analysis
+
+```{r message=FALSE, warning=FALSE, fig.align='center'}
+library(tidyverse)
+library(gridExtra)
+library(grid)
+
+dt <- read_csv("train.csv") |> 
+  rename(bsm = "TotalBsmtSF",
+         `1s` = "1stFlrSF",
+         `2n` = "2ndFlrSF",
+         oq = "OverallQual",
+         sp = "SalePrice",
+         oc = "OverallCond",
+         rm ="TotRmsAbvGrd",
+         bld ="BldgType",
+         exq = "ExterQual",
+         exc = "ExterCond",
+         bdr = "BedroomAbvGr") |> 
+  mutate(tsf = `1s` + `2n` + bsm,
+         nbd = case_when(Neighborhood %in% c("StoneBr", "NridgHt", "NoRidge") ~ 1, TRUE ~ 0), 
+         tsf1 = ifelse(tsf>7500, 2567, tsf),
+         bld1 = case_when(bld %in% c("TwnhsE", "1Fam") ~ 1, TRUE ~ 0),
+         exq = as.character(exq),
+         exq = case_when(exq == "Ex" ~ 10, exq == "Gd" ~ 8, 
+                         exq == "TA" ~ 6, exq == "Fa" ~ 4, 
+                         exq == "Po" ~ 2, TRUE ~ NA_integer_),
+         exq = as.numeric(exq), 
+         exc = as.character(exc),
+         exc = case_when(exc == "Ex" ~ 10, exc == "Gd" ~ 8, 
+                                exc == "TA" ~ 6, exc == "Fa" ~ 4, 
+                                exc == "Po" ~ 2, TRUE ~ NA_integer_), 
+         exc = as.numeric(exc),
+         oq1 = case_when(oq %in% c(1,2,3, 4) ~ 4, TRUE ~ oq),
+         bdr1 = case_when(bdr > 3 ~ 1, TRUE ~ 0),
+         occ = oq+exq+exc+oc,
+         oc1 = ceiling((oq+exq+exc+oc)/4),
+         oc2 = case_when(oc1 > 6 ~ 1, TRUE ~ 0),
+         kq = as.character(KitchenQual),
+         kq = case_when(kq == "Ex" ~ 1, kq == "Gd" ~ 2, 
+                         kq == "TA" ~ 3, kq == "Fa" ~ 4, 
+                         kq == "Po" ~ 5, TRUE ~ NA_integer_),
+         kq = as.numeric(kq),
+         kq1 = case_when(kq < 3 ~ 1, TRUE ~ 0),
+         bth = BsmtFullBath+BsmtHalfBath+FullBath+HalfBath,
+         sc = case_when(SaleCondition %in% c("Partial","Alloca","Normal") ~ 1, TRUE ~ 0),
+         ht = case_when(HeatingQC == "Ex" ~ 1, HeatingQC == "Gd" ~ 2, 
+                         HeatingQC == "TA" ~ 3, HeatingQC == "Fa" ~ 4, 
+                         HeatingQC == "Po" ~ 5, TRUE ~ NA_integer_),
+         Alley = as.character(Alley),
+         al = replace_na(Alley, "no"),
+         al = case_when(al == "no" ~ 0, TRUE ~ 1),
+         al = as.numeric(al),
+         Utilities = as.character(Utilities),
+         ut = case_when(Utilities == c("AllPub","NoSewr") ~ 1, TRUE ~ 0), 
+         ut = as.numeric(ut),
+         fp = case_when(Fireplaces > 0 ~ 1, TRUE ~ 0),
+         GarageFinish = as.character(GarageFinish),
+         gr = replace_na(GarageFinish, "no"),
+         gr = case_when(gr == "no" ~ 0, TRUE ~ 1),
+         gr = as.numeric(gr),
+         PoolQC = as.character(PoolQC),
+         pl = replace_na(PoolQC, "no"),
+         pl = case_when(pl == "no" ~ 0, TRUE ~ 1),
+         pl = as.numeric(pl),
+         Fence = as.character(Fence),
+         fnc = replace_na(Fence, "no"),
+         fnc = case_when(fnc == "no" ~ 0, TRUE ~ 1),
+         fnc = as.numeric(fnc))
+
+dt1 <- dt |> 
+  group_by(YearBuilt) |> 
+  summarise(sp=mean(sp)) |> 
+  filter(YearBuilt > 1930)
+
+dt2 <- dt |> 
+  group_by(YearRemodAdd) |> 
+  summarise(sp=mean(sp))
+
+themex <- theme(
+    
+    axis.text.y =
+      element_text(color="grey25",size=10.5),
+    
+    axis.text.x = 
+      element_text(color="grey25", size=10.5),
+    
+    axis.title = 
+      element_text(color="grey15", size=12),
+    
+    axis.ticks = 
+      element_blank(),
+    
+    plot.title = 
+      element_text(size=14,
+                   color="grey5", 
+                   hjust = .5,
+                   face = "bold"),
+    plot.caption = 
+      element_text(size=10,
+                   color="grey15"),
+    
+    legend.text = element_text(size = 10.5,
+                               color = "grey25"),
+
+    legend.title = element_text(size = 12,
+                               color = "grey15"),
+    
+    panel.grid.major = 
+      element_blank(),
+    
+    panel.grid.minor.x = 
+      element_blank(),
+    
+    panel.grid = 
+      element_blank(),
+    
+    strip.text = 
+      element_text(size = 12, 
+                   face="bold", 
+                   angle = 0, 
+                   colour = "white"),
+    
+    strip.background = 
+      element_rect(colour = "steelblue", 
+                   fill = "steelblue"))
+
+##### graphs
+
+s1 <- ggplot(dt1, aes(YearBuilt, sp))+
+  
+  geom_line(show.legend = F, col="darkseagreen", linewidth = 1) +
+  
+  theme_classic() +
+
+  scale_y_continuous(breaks=c(100000,
+                              200000,
+                              300000,
+                              400000),
+                     labels = c("$100k",
+                                "$200k",
+                                "$300k",
+                                "$400k"))+
+  labs(
+    x="year",
+    y="Selling Price",
+    title = "Average Selling Price per Construction Year"
+  ) +
+  themex +
+  theme(plot.background = element_rect(color = "grey90", fill = NA, size = 2))
+
+
+s2 <- ggplot(dt2, aes(YearRemodAdd, sp))+
+  
+  geom_line(show.legend = F, col="steelblue4", linewidth = 1) +
+  
+  theme_classic() +
+  
+  scale_y_continuous(breaks=seq(100000,
+                                300000,
+                                by=50000),
+                     labels =
+                       c("$100k",
+                         "$150k",
+                         "$200k",
+                         "$250k",
+                         "$300k"))+
+  labs(
+    x="year",
+    y="Selling Price",
+    title = "Average Selling Price per Remodeling Year"
+  ) +
+  themex +
+  theme(plot.background = element_rect(color = "grey90", fill = NA, size = 2))
+
+
+g1 <- ggplot(dt1, aes(YearBuilt, sp))+
+  geom_line(show.legend = F, col="darkseagreen", linewidth = 1) +
+  theme_classic() +
+  # scale_x_continuous(breaks=c(1,2,3,4),labels = c("Excellent","Good","Average","Poor"))+
+  scale_y_continuous(breaks=c(100000,200000,300000,400000),labels = c("$100k","$200k","$300k","$400k"))+
+  labs(
+    x=" ",
+    y=" ",
+    title = "Construction Year"
+  ) +
+  
+  theme_classic() +
+  themex
+
+
+g2 <- ggplot(dt2, aes(YearRemodAdd, sp))+
+  geom_line(show.legend = F, col="steelblue4", linewidth = 1) +
+  theme_classic() +
+  scale_y_continuous(breaks=seq(100000,300000,by=50000),labels = c("$100k","$150k","$200k","$250k","$300k"))+
+  #scale_y_continuous(breaks=c(100000,200000,300000,400000),labels = c("$100k","$200k","$300k","$400k"))+
+  labs(
+    x=" ",
+    y=" ",
+    title = "Remodelation Year"
+  ) +
+  themex
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r, message=FALSE, warning=FALSE, fig.align='center', echo=FALSE, fig.width=10}
+s1
+```
+
+</div>
+<div class="graph-container" data-graphname="remodeledhouses">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+Over the years, houses have been following an upward trend in selling prices. This may be due to multiple factors such as, economic cycles, better quality homes, seasonal tendencies among others.
+
+Overall, newer houses or newly remodeled houses tend to be sold for higher prices.
+
+<br>
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r message=FALSE, warning=FALSE, fig.align='center', fig.width=10, echo=FALSE}
+
+s2
+
+```
+
+</div>
+<div class="graph-container" data-graphname="remodeledhouses2">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+Here is a comparison for both graphs side by side.
+
+<br>
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r fig.align='center', fig.width=10, message=FALSE, warning=FALSE, echo=FALSE}
+grid_arranged <- grid.arrange(g1,g2, ncol=2,
+                        left = textGrob("Selling Price", rot = 90, gp = gpar(fontsize = 14)),
+                        bottom = textGrob("Year", gp = gpar(fontsize = 14)))
+
+grid.newpage()
+grid.draw(grid_arranged)
+grid.rect(gp = gpar(lwd = 3, col = "grey90", fill = NA)) 
+```
+
+</div>
+<div class="graph-container" data-graphname="sellinghousestogether">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+

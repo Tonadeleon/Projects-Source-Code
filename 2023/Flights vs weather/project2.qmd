@@ -1,0 +1,347 @@
+---
+title: "Client Report - [Insert Project Title]"
+subtitle: "Course DS 250"
+author: "[STUDENT NAME]"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+## Elevator pitch
+
+> After analyzing the airport data on delays, we see that the San Francisco has the most delays in general and proportionally compared to other airports. There is the chance that this is because of bad weather. Other airports appear to be delayed above the industry mean.
+
+## Data:
+
+```{python}
+
+#Load libraries ------------------------------
+import pandas as pd
+import numpy as np
+from lets_plot import *
+from IPython.display import display, HTML
+LetsPlot.setup_html(isolated_frame=True, no_js=True)
+
+#Read Data -----------------------------------
+url = "https://github.com/byuidatascience/data4missing/raw/master/data-raw/flights_missing/flights_missing.json"
+data = pd.read_json(url)
+```
+
+**URL:** [JSON File](https://github.com/byuidatascience/data4missing/raw/master/data-raw/flights_missing/flights_missing.json)
+
+**Information:** [Data Description](https://github.com/byuidatascience/data4missing/blob/master/data.md)
+
+**Subject Matter:** [Types of Delay](https://aspm.faa.gov/aspmhelp/index/Types_of_Delay.html)
+
+## Example of a Row
+
+```{python section 1}
+
+#Load libraries ------------------------------
+numeric_cols = [
+    'year',
+    'num_of_flights_total',
+    'num_of_delays_late_aircraft',
+    'num_of_delays_nas',
+    'num_of_delays_security',
+    'num_of_delays_weather',
+    'num_of_delays_total',
+    'minutes_delayed_carrier',
+    'minutes_delayed_late_aircraft',
+    'minutes_delayed_nas',
+    'minutes_delayed_security',
+    'minutes_delayed_weather',
+    'minutes_delayed_total'
+]
+
+for col in numeric_cols:
+    data[col] = pd.to_numeric(data[col], errors='coerce')
+
+data['num_of_delays_carrier'] = pd.to_numeric(data['num_of_delays_carrier'], errors='coerce')
+
+data = data.replace({'': np.nan, 'NA': np.nan, 'N/A': np.nan})
+
+#Example Row ---------------------------------
+dataprint = data.fillna("NaN")
+example_record = dataprint.iloc[2].to_json()
+print((example_record))
+```
+
+## Worst Airport
+
+> By considering the proportional summary of the amount of flights that were delayed during the timespan in which this data set was recorded.
+>
+> We can see that San Francisco aiport is overall the "worst" airport in terms of percentage of flights delayed. It would be interesting to know why they are so high in their delay metrics.
+
+```{python sections 2}
+
+#Worst airport wrangling ---------------------------------
+summary = data.groupby(['airport_code']).agg(
+    **{
+        'Total Flights': ('num_of_flights_total', 'sum'),
+        'Total Delayed Flights': ('num_of_delays_total', 'sum'),
+        'Total Minutes Delayed': ('minutes_delayed_total', 'sum')
+    }
+).reset_index()
+
+summary['% Delayed All Time'] = (summary['Total Delayed Flights'] / summary['Total Flights'] * 100).round(0).astype(int).astype(str) + '%'
+
+summary['Avg Delay Hrs'] = round(summary['Total Minutes Delayed'] / 60 / summary['Total Delayed Flights'],1)
+
+summary_selected = summary[[
+  'airport_code', 
+  '% Delayed All Time', 
+  'Avg Delay Hrs']]\
+  .rename(columns={
+    'airport_code': 
+    'Airport Code'})\
+  .sort_values(by='% Delayed All Time', ascending=False)
+
+
+#Worst Aiport table ---------------------------------
+html_table = summary_selected.to_html(index=False, classes='table table-striped', border=0)
+display(HTML(html_table))
+```
+
+## Delays by Month
+
+> We see a trend while analyzing proportion of delays by month. This indicates to me that we could apply a time series analysis to decompose the data into its seasonal components and maybe understand how future season will impact company's flights. The results suggest that the best months to travel may be **April, May, September, October, and November.**
+
+```{python section 3, warning=FALSE, message=FALSE}
+
+#Delays by month wrangling --------------------------
+data_month = data.dropna(subset=['month'])
+data_month['month'] = data_month['month'].replace('Febuary', 'February')
+monthly_delays = data_month.groupby('month').agg(
+    total_flights=('num_of_flights_total', 'sum'),
+    total_delayed_flights=('num_of_delays_total', 'sum')
+).reset_index()
+
+monthly_delays['proportion_delayed'] = monthly_delays['total_delayed_flights'] / monthly_delays['total_flights']
+
+months_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+monthly_delays['month'] = monthly_delays['month'].replace({
+    'January': 'Jan',
+    'February': 'Feb',
+    'March': 'Mar',
+    'April': 'Apr',
+    'May': 'May',
+    'June': 'Jun',
+    'July': 'Jul',
+    'August': 'Aug',
+    'September': 'Sep',
+    'October': 'Oct',
+    'November': 'Nov',
+    'December': 'Dec'
+})
+monthly_delays['month'] = pd.Categorical(monthly_delays['month'], categories=months_order, ordered=True)
+monthly_delays = monthly_delays.sort_values('month')
+
+mean_proportion = monthly_delays['proportion_delayed'].mean()-.005
+monthly_delays['above_mean'] = monthly_delays['proportion_delayed'] > mean_proportion
+
+#plotting delays by month --------------------------
+ggplot(monthly_delays, aes(x='month', y='proportion_delayed', color='above_mean', fill='above_mean')) + \
+       geom_bar(stat='identity') + \
+       labs(
+           title='Proportion of Delayed Flights by Month',
+           x='Month',
+           y='Percentage Delayed (%)'
+       ) + \
+       scale_x_discrete(limits=months_order) + \
+       scale_y_continuous(
+           labels=[f"{x}%" for x in range(0, 31, 5)],
+           breaks=[x / 100 for x in range(0, 31, 5)]
+       ) + \
+       scale_fill_manual(
+           values={'True': '#CD4F39', 'False': '#9FB6CD'},
+           labels={'True': 'Above Mean', 'False': 'Below Mean'},
+           name='Delay Status'
+       ) + \
+        scale_color_manual(
+           guide='none',
+           values={'True': '#CD6600', 'False': '#9FB6CD'},
+           labels={'True': 'Above Mean', 'False': 'Below Mean'},
+           name='Delay Status'
+       ) + \
+       theme(
+           axis_text_x=element_text(angle=0, hjust=1),
+           axis_text_y=element_text(angle=0, hjust=1),
+           legend_position="top",
+           plot_title=element_text(size=25, hjust=.5, margin=[0, 0, 10, 0], face="bold")
+       ) + \
+       geom_hline(yintercept=mean_proportion, linetype='dashed', color='black') + \
+    geom_text(
+        x=len(monthly_delays) - 9.5, 
+        y=mean_proportion+.01, 
+        label=f'Mean: {round(mean_proportion * 100)}%',
+        color='black'
+    )
+
+```
+
+## Five Rows With Weather Data
+
+```{python section 4}
+
+#Wrangling to calculate wather data ---------------------------------
+mean_late_aircraft = data['num_of_delays_late_aircraft'].mean()
+data['num_of_delays_late_aircraft'] = data['num_of_delays_late_aircraft'].fillna(mean_late_aircraft)
+
+def calculate_weather_delays(row):
+    weather_delays = row['num_of_delays_weather']
+    late_aircraft_weather = row['num_of_delays_late_aircraft'] * 0.3
+    
+    if row['month'] in ['April', 'May', 'June', 'July', 'August']:
+        nas_weather = row['num_of_delays_nas'] * 0.4
+    else:
+        nas_weather = row['num_of_delays_nas'] * 0.65
+    
+    return weather_delays + late_aircraft_weather + nas_weather
+
+data['total_weather_delays'] = data.apply(calculate_weather_delays, axis=1)
+
+
+#Displaying table ---------------------------------
+summary_selected = data.head(5)
+
+html_table = summary_selected.to_html(
+    index=False, 
+    classes='table table-striped', 
+    border=0
+)
+
+display(HTML(html_table))
+```
+
+## Delays by Weather
+
+> Again we see the San Francisco airport being one of the worst performing weather dealy-wise. 
+>
+> There's not much they can do on the weather delays aspect, so maybe this is the reason why San Francisco has the worst delays overall.
+
+```{python section 5, warning=FALSE, message=FALSE}
+
+# Wrangling ----------------------------------
+weather_summary = data.groupby(['airport_code']).agg(
+    total_flights=('num_of_flights_total', 'sum'),
+    weather_delayed_flights=('total_weather_delays', 'sum')
+).reset_index()
+
+weather_summary['proportion_weather_delayed'] = weather_summary['weather_delayed_flights'] / weather_summary['total_flights']
+
+
+# Plotting ----------------------------------
+mean_proportion = weather_summary['proportion_weather_delayed'].mean()
+
+weather_summary['above_mean'] = weather_summary['proportion_weather_delayed'] <= mean_proportion
+
+ggplot(weather_summary, aes(x='airport_code', y='proportion_weather_delayed', color='above_mean', fill='above_mean')) + \
+    geom_bar(stat='identity') + \
+    labs(
+        title='Flights Delayed by Weather per Airport',
+        x='Airport',
+        y='Percentage Delayed (%)'
+    ) + \
+    scale_y_continuous(
+        labels=[f"{x}%" for x in range(0, 101, 5)],
+        breaks=[x / 100 for x in range(0, 101, 5)]
+    ) + \
+    scale_fill_manual(
+        values={'True': '#9FB6CD', 'False': '#CD4F39'},
+        labels={'True': 'Below Mean', 'False': 'Above Mean'},
+        name='Delay Status'
+    ) + \
+    scale_color_manual(
+        guide='none',
+        values={'True': '#9FB6CD', 'False': '#CD6600'}
+    ) + \
+    geom_hline(yintercept=mean_proportion, linetype='dashed', color='black') + \
+    geom_text(
+        x=len(weather_summary) - 1, 
+        y=mean_proportion+.005, 
+        label=f'Mean: {round(mean_proportion * 100)}%',
+        color='black'
+    ) + \
+    theme(
+        axis_text_x=element_text(angle=0, hjust=1),
+        legend_position='top',
+        plot_title=element_text(size=25, hjust=0.5, margin=[0, 0, 10, 0], face='bold')
+    )
+```
+
+## Analysis by Delays by Type
+
+> Three different types of delays were analyze; delays by weather, security delays, and delays by carrier. 
+>
+> After summarizing the results, the security delays were so small, that were taken out of the final graph, thus only including carrier delays and weather delays.
+>
+> Overall, weather delays are dominant throughout industry as a whole.
+
+```{python section 6}
+
+# Wrangling ----------------------------------
+data['num_of_flights_total'] = pd.to_numeric(data['num_of_flights_total'], errors='coerce')
+data['num_of_delays_carrier'] = pd.to_numeric(data['num_of_delays_carrier'], errors='coerce')
+data['num_of_delays_security'] = pd.to_numeric(data['num_of_delays_security'], errors='coerce')
+data['total_weather_delays'] = pd.to_numeric(data['total_weather_delays'], errors='coerce')
+
+delay_categories = data.groupby(['airport_code']).agg(
+    total_flights=('num_of_flights_total', 'sum'),
+    carrier_delayed=('num_of_delays_carrier', 'sum'),
+    security_delayed=('num_of_delays_security', 'sum'),
+    weather_delayed=('total_weather_delays', 'sum')
+).reset_index()
+
+delay_categories['prop_carrier'] = delay_categories['carrier_delayed'] / delay_categories['total_flights']
+delay_categories['prop_weather'] = delay_categories['weather_delayed'] / delay_categories['total_flights']
+
+delay_melt = delay_categories.melt(id_vars=['airport_code'], value_vars=['prop_carrier', 'prop_weather'],
+var_name='delay_type', value_name='proportion')
+
+delay_melt['delay_type'] = delay_melt['delay_type'].replace({
+    'prop_carrier': 'Carrier Delay',
+    'prop_weather': 'Weather Delay'
+})
+
+
+# Plotting ----------------------------------
+ggplot(delay_melt, aes(x='airport_code', y='proportion', fill='delay_type')) + \
+    geom_bar(stat='identity', position='dodge') + \
+    labs(
+        title='Proportion of Delay Types by Airport',
+        x='Airport',
+        y='Percentage of Delays (%)'
+    ) + \
+    scale_y_continuous(labels=[f"{x}%" for x in range(0, 101, 5)], breaks=[x / 100 for x in range(0, 101, 5)]) + \
+    scale_fill_manual(
+        values=['#68838B', '#EECFA1', '#FFD700'],
+        name='Delay Type'
+    ) + \
+    theme(
+        axis_text_x=element_text(angle=0, hjust=1),
+        legend_position='top',
+        plot_title=element_text(size=20, hjust=0.5, face='bold')
+    )
+
+
+```

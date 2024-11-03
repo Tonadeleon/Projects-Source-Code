@@ -1,0 +1,653 @@
+---
+title: "Classifying Old Houses"
+subtitle: "Course DS 250"
+author: "Tonatiuh de Leon"
+---
+
+## Introduction
+
+> Using the Colorado State housing data, I developed a a couple classifier models in order to estimate if a house was built before 1980 or not. Then picked the best one out of them by highest accuracy rating.
+
+<br>
+
+---
+
+## Data:
+
+```{python setup}
+
+# Load libraries -------------------------------------
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from lets_plot import *
+from IPython.display import display, HTML
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report,
+    roc_auc_score,
+    roc_curve
+)
+from sklearn.model_selection import train_test_split, RandomizedSearchCV, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+import xgboost as xgb
+from scipy.stats import randint, uniform
+
+LetsPlot.setup_html()
+
+
+# Reading Data ---------------------------------------
+data_url = 'https://github.com/byuidatascience/data4dwellings/raw/master/data-raw/dwellings_ml/dwellings_ml.csv'
+df_clean = pd.read_csv(data_url)
+df_clean['before1980'] = df_clean['before1980'].astype('category')
+```
+
+**URL:** [CSV URL](https://github.com/byuidatascience/data4dwellings/raw/master/data-raw/dwellings_ml/dwellings_ml.csv)
+
+**Information:** [Data Description](https://github.com/byuidatascience/data4dwellings/blob/master/data.md)
+
+**Optional Data URL:** [Raw Data](https://github.com/byuidatascience/data4dwellings/raw/master/data-raw/dwellings_denver/dwellings_denver.csv)
+
+<br>
+
+---
+
+## Data Distribution
+
+> Below we can see a clear lump in the houses constructed before 1992. Considering that it is reasonable to think that there is a good gap in the distribution where a classifying model can come in play.
+>
+> Even when the actual gap is around 1992, we'll try to identify those houses built before 1980. We may have enough data, and a good determinant year to be able to use a machine learning process to classify which houses were built before the given year and which ones weren't. 
+
+```{python histogram}
+
+# Built Houses Distribution ------------------------------
+vlines = pd.DataFrame({
+    'xintercept': [1992]
+})
+
+(
+ggplot(df_clean, aes(
+  x='yrbuilt', 
+  fill='before1980')) +
+geom_histogram(
+  binwidth=5, 
+  position='dodge', 
+  color='black') +
+labs(title='Houses Built by Year',
+  x='Year Built',
+  y='Count') +
+scale_x_continuous(
+  breaks=list(range(1800, 2024, 20)),
+  labels=[str(x) for x in range(1800, 2024, 20)]) +
+theme_minimal() +
+geom_vline(
+  mapping=aes(xintercept='xintercept'), data=vlines, 
+  color="red", 
+  linetype="dashed",
+  size=1) +
+theme(
+  axis_text_x=element_text(angle=0, hjust=1),
+  axis_text_y=element_text(angle=0, hjust=1),
+  axis_title_x=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  axis_title_y=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  legend_position="none",
+  plot_title=element_text(size=25, 
+                          hjust=0.5,
+                          margin= [0, 0, 10, 0], 
+                          face="bold")
+)+
+ggsize(800, 400)
+)
+```
+
+> I would now like to check for variables that are correlated to the `before1998` column. That way we'll know what variables to use in the models. 
+
+```{python heat map}
+
+# Plot Correlation Matrix --------------------------------
+df_cleaned = df_clean.drop(columns=['parcel'])
+corr_matrix = df_cleaned.corr()
+
+corr_with_before1980 = corr_matrix['before1980'].abs().sort_values(ascending=False)
+
+corr_with_before1980 = corr_matrix.loc[corr_with_before1980.index, ['before1980']]
+
+plt.figure(figsize=(8, 10))
+sns.heatmap(corr_with_before1980, annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title('Correlation with Before 1980')
+plt.show()
+
+```
+
+<br>
+
+---
+
+## Testing Models
+
+> To properly fit the most efficient model at hand, I tested almost all variables in the data set, such as **Total Sq Ft**, and many categorical variables like if the house **has a garage or not**, **has a fireplace or not**, and many others to find a better fit for the data. 
+>
+> Even when at first I did use only the variables with a correlation above .1 and got a good fit, I ended up using all variables and found a better fit.
+>
+> 4 different classification models were trained including **Random Forest**, **Gradient Boosting**, **Logistic Regression**, **Support Vector Machine**. 
+>
+> I trained simple models for each of them. All using simple parameters. You can see their output summary below in which I compare their accuracy against the training data sets. I'll pick the most accurate ones and tune those up to see if I get a better fit on them. 
+
+```{python variables transformations and tests}
+
+# Used Variables -----------------------------------------
+features = [
+    'livearea', 'finbsmnt', 'basement', 'totunits', 'stories',
+    'nocars', 'numbdrm', 'numbaths', 'sprice', 'deduct', 'netprice',
+    'tasp', 'smonth', 'syear', 'condition_AVG', 'condition_Excel',
+    'condition_Fair', 'condition_Good', 'condition_VGood',
+    'quality_A', 'quality_B', 'quality_C', 'quality_D', 'quality_X',
+    'gartype_Att', 'gartype_Att/Det', 'gartype_CP', 'gartype_Det',
+    'gartype_None', 'gartype_att/CP', 'gartype_det/CP',
+    'arcstyle_BI-LEVEL', 'arcstyle_CONVERSIONS', 'arcstyle_END UNIT',
+    'arcstyle_MIDDLE UNIT', 'arcstyle_ONE AND HALF-STORY',
+    'arcstyle_ONE-STORY', 'arcstyle_SPLIT LEVEL',
+    'arcstyle_THREE-STORY', 'arcstyle_TRI-LEVEL',
+    'arcstyle_TRI-LEVEL WITH BASEMENT', 'arcstyle_TWO AND HALF-STORY',
+    'arcstyle_TWO-STORY', 'qualified_Q', 'qualified_U',
+    'status_I', 'status_V'
+]
+
+X = df_clean[features]
+y = df_clean['before1980']
+
+
+# Splitting and Sacling Data -----------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+
+# Training Many Models -----------------------------------
+models = {
+    'Random Forest': RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    ),
+    'Gradient Boosting': GradientBoostingClassifier(n_estimators=200, learning_rate=0.1, max_depth=3, random_state=42),
+    'Support Vector Machine': SVC(
+        probability=True,
+        random_state=42
+    ),
+        'Logistic Regression': LogisticRegression(
+        max_iter=1000,
+        random_state=42
+    )
+}
+
+for name, model in models.items():
+  model.fit(X_train_scaled, y_train)
+
+
+# Output the results in a pretty table -------------------
+model_results = []
+
+for name, model in models.items():
+  y_pred_model = model.predict(X_test_scaled)
+  accuracy = accuracy_score(y_test, y_pred_model) * 100       
+  model_results.append({
+      "Model": name,
+      "Accuracy (%)": round(accuracy, 2),
+    })
+
+summary_df = pd.DataFrame(model_results)
+
+html_table = summary_df.to_html(index=False, classes="table table-striped", border=0)
+display(HTML(html_table))
+
+```
+
+<br>
+
+---
+
+## Random Forest Model
+
+> To fine tune this model I randomized a search on the hyperparameters to find a best fitting model. Both of my models are already above a 90% accuracy, so I won't iterate for too long to get a better fit. The code below computed the randomized search, it's commented out to avoid re-running when rendering. **After that you can see what parameters offer a better fit while not overfitting the model.** 
+
+```{python hyper tunning rf}
+
+# # Randomized Searching for Model ------------------------------
+# param_grid = {
+#     'n_estimators': [100, 200, 300],
+#     'max_depth': [None, 10, 20, 30],
+#     'min_samples_split': [2, 5, 10],
+#     'min_samples_leaf': [1, 2, 4],
+#     'bootstrap': [True, False]
+# }
+
+# rf = RandomForestClassifier(random_state=42)
+
+# grid_search = GridSearchCV(
+#     estimator=rf,
+#     param_grid=param_grid,
+#     cv=5,
+#     n_jobs=-1,
+#     scoring='accuracy',
+#     verbose=2
+# )
+
+# grid_search.fit(X_train_scaled, y_train)
+
+# best_params = grid_search.best_params_
+# print(f'Best Parameters: {best_params}')
+
+# # Best Estimators ------------------------------------
+# best_rf = grid_search.best_estimator_
+
+# y_pred_best = best_rf.predict(X_test_scaled)
+
+# best_accuracy = accuracy_score(y_test, y_pred_best)
+# print(f'Best Random Forest Accuracy after Tuning: {best_accuracy * 100:.2f}%')
+
+# Model Training and Fitting -------------------------
+rf = RandomForestClassifier(
+  bootstrap = False, 
+  max_depth = 20, 
+  min_samples_leaf = 1, 
+  min_samples_split = 2, 
+  n_estimators = 300)
+
+rf.fit(X_train_scaled, y_train)
+y_pred = rf.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred) * 100
+
+
+```
+
+> The results of the randomized search within 1080 fits for the best fit indicate that, these were the best fitting parameters for accuracy:
+
+* **'bootstrap'**: False, 
+* **'max_depth'**: 20, 
+* **'min_samples_leaf'**: 1, 
+* **'min_samples_split'**: 2, 
+* **'n_estimators'**: 300
+
+> With a **best accuracy of `{python} round(accuracy,2)`%**
+>
+> I modeled a random forest classifier with the parameters above, and following next, I plotted the most important variables according to this classifier model, followed by the ROC statistics.
+
+```{python rf fitting}
+
+# Important Features plottinh ------------------------
+importances = rf.feature_importances_
+feature_names = X.columns
+
+feature_importances = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importances
+}).sort_values(by='Importance', ascending=False)
+
+feature_importances_sorted = feature_importances.head(10).sort_values(by='Importance', ascending=True)
+
+feature_importances_sorted['Feature'] = pd.Categorical(
+    feature_importances_sorted['Feature'],
+    categories=feature_importances_sorted['Feature'],
+    ordered=True
+)
+
+# print(f'Best Random Forest Accuracy after Tuning: {accuracy * 100:.2f}%')
+
+(
+ggplot(feature_importances_sorted, aes(
+  x='Feature', 
+  y='Importance')) +
+geom_bar(stat='identity', fill='blue') +
+coord_flip() +
+labs(
+  title='Top 10 Important Variables (RF)',
+  x='Var',
+  y='Importance') +
+theme_minimal() +
+theme(
+  axis_text_x=element_text(angle=0, hjust=1),
+  axis_text_y=element_text(angle=0, hjust=1),
+  axis_title_x=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  axis_title_y=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  legend_position="none",
+  plot_title=element_text(size=25, 
+                          hjust=0.5,
+                          margin= [0, 0, 10, 0], 
+                          face="bold")
+)+
+ggsize(800, 400)
+)
+```
+
+<br>
+
+> The model possesses an accuracy **`{python} round(accuracy,2)`%**. The summary of its ROC and confusion matrix also look good, with an excellent **area under the curve of .98**. Take a look at them below.
+
+```{python}
+
+# ROC and AUC tables -------------------------------------
+y_prob = rf.predict_proba(X_test_scaled)[:, 1]
+roc_auc = roc_auc_score(y_test.cat.codes, y_prob)
+
+cm = confusion_matrix(y_test, y_pred)
+report = classification_report(y_test, y_pred, output_dict=True) 
+roc_auc = roc_auc_score(y_test.cat.codes, y_prob)
+
+accuracy = accuracy_score(y_test, y_pred) * 100
+
+cm_df = pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Predicted 0", "Predicted 1"])
+summary_df = pd.DataFrame({
+    "Metric": ["ROC-AUC Score", "Random Forest Accuracy (%)"],
+    "Value": [round(roc_auc, 2), round(accuracy, 2)]
+})
+
+html_cm = cm_df.to_html(classes="table table-striped", border=0)
+html_summary = summary_df.to_html(index=False, classes="table table-striped", border=0)
+
+display(HTML("<h4>Confusion Matrix</h4>" + html_cm))
+display(HTML("<h4>Summary Metrics</h4>" + html_summary))
+```
+
+```{python rf ROC, fig.width=10}
+
+# ROC plotting ---------------------------------------
+fpr, tpr, thresholds = roc_curve(y_test.cat.codes, y_prob)
+
+roc_df = pd.DataFrame({
+    'False Positive Rate': fpr,
+    'True Positive Rate': tpr
+})
+
+(
+ggplot(roc_df, aes(
+  x='False Positive Rate', 
+  y='True Positive Rate')) +
+geom_line(color='black', size=1) +
+geom_abline(
+  intercept=0, 
+  slope=1, 
+  linetype='dashed', 
+  color='red') +
+labs(
+  title='Random Forest ROC',
+  x='False Positive Rate',
+  y='True Positive Rate') +
+theme_minimal()+
+theme(
+  axis_text_x=element_text(angle=0, hjust=1),
+  axis_text_y=element_text(angle=0, hjust=1),
+  axis_title_x=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  axis_title_y=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  legend_position="none",
+  plot_title=element_text(size=25, 
+                          hjust=0.5,
+                          margin= [0, 0, 10, 0], 
+                          face="bold")
+)+
+ggsize(800, 400)
+)
+
+```
+
+
+<br>
+
+---
+
+## Gradient Boost Model
+
+> I followed the same process to **optimize my gradient boost model**. In order to fine tune it ran a randomized search with xgboost which was faster in computing time than the one I ran with my RF model. 
+
+```{python hyper tuning gb}
+
+# # randomized search with xgboost --------------------
+# param_dist_xgb = {
+#     'n_estimators': randint(100, 500),
+#     'learning_rate': uniform(0.01, 0.29),
+#     'max_depth': randint(3, 15),
+#     'subsample': uniform(0.5, 0.5),
+#     'colsample_bytree': uniform(0.5, 0.5)
+# }
+
+# xgb_clf = xgb.XGBClassifier(
+#     objective='binary:logistic',
+#     eval_metric='logloss',
+#     use_label_encoder=False,
+#     random_state=42
+# )
+
+# random_search_xgb = RandomizedSearchCV(
+#     estimator=xgb_clf,
+#     param_distributions=param_dist_xgb,
+#     n_iter=250,
+#     cv=5,
+#     scoring='accuracy',
+#     random_state=42,
+#     n_jobs=-1,
+#     verbose=2
+# )
+
+# random_search_xgb.fit(X_train_scaled, y_train)
+
+# best_params_xgb = random_search_xgb.best_params_
+# print(f'\nBest Parameters for XGBoost: {best_params_xgb}')
+
+# # Best accuracy  and parameters ----------------------
+# best_xgb = random_search_xgb.best_estimator_
+# y_pred_xgb = best_xgb.predict(X_test_scaled)
+
+# accuracy_xgb = accuracy_score(y_test, y_pred_xgb)
+# print(f'XGBoost Accuracy after Tuning: {accuracy_xgb * 100:.2f}%')
+
+# importances_xgb = best_xgb.feature_importances_
+# feature_importances_xgb = pd.DataFrame({
+#     'Feature': feature_names,
+#     'Importance': importances_xgb
+# }).sort_values(by='Importance', ascending=False)
+
+# print('\nTop 10 Feature Importances in XGBoost:')
+# print(feature_importances_xgb.head(10))
+
+# Model Training and Fitting with XGBoost ------------------------------
+xgb_model = xgb.XGBClassifier(
+    learning_rate=0.026327949947732833,
+    n_estimators=416,
+    max_depth=14,
+    subsample=0.9113951759383465,
+    colsample_bytree=0.7343303209970631,
+    random_state=42,
+    eval_metric='logloss'
+)
+
+xgb_model.fit(X_train_scaled, y_train)
+y_pred = xgb_model.predict(X_test_scaled)
+accuracy = accuracy_score(y_test, y_pred) * 100
+
+```
+
+> After searching accross 1250 fits, these were the best fitting parameters for accuracy:
+
+* **'colsample_bytree'**: 0.7343303209970631, 
+* **'learning_rate'**: 0.026327949947732833, 
+* **'max_depth'**: 14, 
+* **'min_samples_split'**: 2, 
+* **'n_estimators'**: 416
+* **'subsample'**: 0.9113951759383465
+
+> With a **best found accuracy of `{python} round(accuracy,2)`%**
+
+```{python gb fitting}
+
+# Important Features Plotting ------------------------------
+importances = xgb_model.feature_importances_
+feature_names = X.columns
+
+feature_importances = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importances
+}).sort_values(by='Importance', ascending=False)
+
+feature_importances_sorted = feature_importances.head(10).sort_values(by='Importance', ascending=True)
+
+feature_importances_sorted['Feature'] = pd.Categorical(
+    feature_importances_sorted['Feature'],
+    categories=feature_importances_sorted['Feature'],
+    ordered=True
+)
+
+(ggplot(feature_importances_sorted, aes(
+  x='Feature', 
+  y='Importance')) +
+geom_bar(
+  stat='identity', 
+  fill='blue')+
+coord_flip()+
+labs(
+  title='Top 10 Important Variables (GB)',
+  x='Feature',
+  y='Importance') +
+theme_minimal() +
+theme(
+  axis_text_x=element_text(angle=0, hjust=1),
+  axis_text_y=element_text(angle=0, hjust=1),
+  axis_title_x=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  axis_title_y=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  legend_position="none",
+  plot_title=element_text(size=25, 
+                          hjust=0.5,
+                          margin= [0, 0, 10, 0], 
+                          face="bold")
+)+
+ggsize(800, 400)
+)
+
+```
+
+> After fine-tuning the parameters, my gradient boost model achieved an accuracy of **`{python} round(accuracy,2)`%**, which was better performing in accuracy compared to my random forest model.
+>
+> **Both work really well so, either one could be used for this task**
+
+```{python}
+
+# GB ROC and AUC tables ----------------------------------
+y_pred = xgb_model.predict(X_test_scaled)
+y_prob = xgb_model.predict_proba(X_test_scaled)[:, 1]
+
+cm = confusion_matrix(y_test, y_pred)
+cm_df = pd.DataFrame(cm, index=["Actual 0", "Actual 1"], columns=["Predicted 0", "Predicted 1"])
+
+roc_auc = roc_auc_score(y_test.cat.codes, y_prob)
+accuracy = xgb_model.score(X_test_scaled, y_test) * 100
+summary_df = pd.DataFrame({
+    "Metric": ["ROC-AUC Score", "XGBoost Accuracy (%)"],
+    "Value": [round(roc_auc, 2), round(accuracy, 2)]
+})
+
+html_cm = cm_df.to_html(classes="table table-striped", border=0)
+html_summary = summary_df.to_html(index=False, classes="table table-striped", border=0)
+
+y_pred = xgb_model.predict(X_test_scaled)
+y_prob = xgb_model.predict_proba(X_test_scaled)[:, 1]
+cm = confusion_matrix(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+roc_auc = roc_auc_score(y_test.cat.codes, y_prob)
+
+display(HTML("<h4>Confusion Matrix</h4>" + html_cm))
+display(HTML("<h4>Summary Metrics</h4>" + html_summary))
+```
+
+```{python ROC gb}
+
+# Feature Importance -----------------------------
+feature_importances = pd.Series(xgb_model.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+accuracy = xgb_model.score(X_test_scaled, y_test)
+
+# Plotting ROC Curve -----------------------------
+fpr, tpr, thresholds = roc_curve(y_test.cat.codes, y_prob)
+
+roc_df = pd.DataFrame({
+    'False Positive Rate': fpr,
+    'True Positive Rate': tpr
+})
+
+(
+ggplot(roc_df, aes(
+  x='False Positive Rate', 
+  y='True Positive Rate')) +
+geom_line(
+  color='black', 
+  size=1) +
+geom_abline(
+  intercept=0, 
+  slope=1, 
+  linetype='dashed', 
+  color='red') +
+labs(
+  title='Gradient Boosting ROC',
+  x='False Positive Rate',
+  y='True Positive Rate') +
+theme_minimal()+
+theme(
+  axis_text_x=element_text(angle=0, hjust=1),
+  axis_text_y=element_text(angle=0, hjust=1),
+  axis_title_x=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  axis_title_y=element_text(angle=0, 
+                            hjust=.5, 
+                            face="bold"),
+  legend_position="none",
+  plot_title=element_text(size=25, 
+                          hjust=0.5,
+                          margin= [0, 0, 10, 0], 
+                          face="bold")
+)+
+ggsize(800, 400)
+)
+
+
+```
+
+<br>
+
+---
+
+## Conclusion
+
+> Upon fitting both models, one thing in common is that the **arc style** of a house is a really good predictor for whether the house was built before 1980 or not.
+>
+> This makes sense given that the column may be indicating that some building styles were more popular back then.
+>
+> Overall the **gradient boosting** model worked best for this analysis, however the **random forest** model is only one step behind it.
+>
+> These may not be all the possible models available to do with this data set with classification purposes, but they are reliable in their purpose.
+>
+> **Whichever model is chosen to go with would work great.**
+
+<br>

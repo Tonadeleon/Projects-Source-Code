@@ -1,0 +1,1203 @@
+---
+title: "Modeling The Milky Way"
+author: "Tonatiuh De Leon"
+output: 
+  html_document:
+    theme: flatly
+    code_folding: hide
+---
+
+<br>
+
+### Introduction
+
+> This section of my portfolio demonstrates my capabilities in statistical modeling (Monte Carlo Simulations) using functional programming. Simulations are useful when there is insufficient data for a specific scenario, but you have parameters and an idea of how the variables might behave. These inferences can be used to model your data, providing a broader understanding of how to approach and better comprehend its essence.
+>
+> When I learned about regression models, my teacher taught us by using simulation modeling. He created a game for us to get hands on experience in simulations.
+> We had to design a simulated data set with specific parameters chosen by ourselves to create any laws/models that we wanted. Then put us to compete against each other and see who could figure out the other student's model by using regression techniques. 
+> 
+> Here I'll show you one of my models with which I competed in the game called Regression-Battleship. This model started as a simple representation of a spiral galaxy, but quickly ended up turning into a different (but still good) idea!
+
+```{r message=FALSE, warning=FALSE}
+library(pander)
+library(tidyverse)
+```
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**R Modeling - For Regression Methods**</strong></p>
+
+After designing our prospect models, we had to create them using functional programming for statistics in R. Check out the code in the **Show** button to the right. 
+
+The output is then show as the graphs below with their respective regression lines which my peers had to figure out.
+
+```{r, fig.align='center'}
+
+set.seed(10) 
+
+n <- 1000
+
+x2 <- sample(c(0,1), n, replace = T, prob=c(.2,.8))
+
+x3 <- sample(c(0,1), n, replace = T, prob=c( .5,.5))
+
+x4 <- sample(c(0,1), n, replace = T, prob = c( .4,.6))
+
+x6 <- sample(c(0,1), n, replace = T, prob = c(.4,.6))
+
+x1 <- runif(n, -1.6,3.1)
+
+
+
+ 
+beta0 <- -4 
+beta1 <- 1.3
+beta2 <- .6
+#
+beta3 <- 7.3
+beta4 <- 2.2
+beta5 <- -.8
+beta6 <- -.2
+beta7 <- 0
+#
+beta8 <- -4.7
+beta9 <- -3.3
+beta10 <- 1
+beta11 <- .8
+beta12 <- -.2
+#
+beta13 <- 2.2
+beta14 <- 2.1
+beta15 <- -2.2
+beta16 <- -.8
+beta17 <- .6
+#
+beta18 <- -1.3
+beta19 <- -.9
+beta20 <- 2.4
+
+ 
+sigma <- 0 #change to whatever positive number you want
+x1[x2 == 0 & x3 == 0 & x4 == 0 & x6 == 0] <- runif(sum(x2 == 0 & x3 == 0 & x4 == 0 & x6 == 0), -3, 3)
+ 
+x1[x2 == 1 & x3 == 0 & x4 == 0 & x6 == 0] <- runif(sum(x2 == 1 & x3 == 0 & x4 == 0 & x6 == 0), -3.3, 3)
+
+x1[x2 == 1 & x3 == 1 & x4 == 0 & x6 == 0] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 0 & x6 == 0), -1, 3.1)
+
+x1[x2 == 1 & x3 == 1& x4 == 1 & x6==0] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 1& x6==0), -1.51, 1)
+
+x1[x2 == 1 & x3 == 1  & x4 == 1 & x6 == 1] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 1 & x6 == 1), 0, .9)
+
+ 
+ Y_i <- beta0 + beta1*x1 + beta2*x1^2 +
+  
+  beta3*x2 + beta4*x1*x2 + beta5*x1^2*x2 + beta6*x1^3*x2 + beta7*x1^4*x2 +
+  
+    beta8*x2*x3 + beta9*x1*x2*x3 + beta10*x1^2*x2*x3 + beta11*x1^3*x2*x3 + beta12*x1^4*x2*x3 +
+  
+  beta13*x2*x3*x4 + beta14*x1*x2*x3*x4 + beta15*x1^2*x2*x3*x4 + beta16*x1^3*x2*x3*x4 + beta17*x1^4*x2*x3*x4 + 
+  
+  beta18*x2*x3*x4*x6 + beta19*x1*x2*x3*x4*x6 + beta20*x1^2*x2*x3*x4*x6 
+
+ rbdatawhale <- data.frame(y=(Y_i), x1=(x1), x2=x2 ,x3=x3, x4=x4, x6=x6) 
+ 
+ 
+whale1 <- ggplot(rbdatawhale, aes(x1, y, col=x1)) +
+  
+  geom_point(show.legend = F) +
+  
+  viridis::scale_color_viridis(direction = -1, option = "G", alpha = .8) +
+  
+  labs(
+    title = "|Long Story Short - I Turned my 'Milky Way' Model Into a Regression-Like Whale|\n")+
+
+  theme_void() +
+  
+  theme(
+    #plot.subtitle = element_text(hjust = .3 ,color = "grey40"),
+    plot.title = element_text(hjust=.05, color = "grey25"),
+    plot.caption = element_text(hjust=.9, vjust = 5, color = "grey40", size=10))
+ 
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r echo=FALSE, fig.width=10, fig.align='center', message=FALSE, warning=FALSE}
+whale1
+```
+
+</div>
+<div class="graph-container" data-graphname="whaleclean">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+```{r fig.align='center', message=FALSE, warning=FALSE}
+
+#####################################################
+# I untransform first before plotting my final model
+#####################################################
+
+#set.seed(16) #n 300
+
+set.seed(8) #404
+
+#set.seed(120) 
+#set.seed(13)
+
+
+#This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+n <- 404
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... ## To see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values. But the way you choose your x-values can have quite an impact on what the final scatterplot of the data will look like.
+
+################################
+#These belong to my true model
+################################
+
+ 
+
+x2 <- sample(c(0,1,2), n, replace = T, prob=c(.3,.6,.1))
+
+x3 <- sample(c(0,1), n, replace = T, prob=c( .4,.4))
+
+x4 <- sample(c(0,1), n, replace = T, prob = c( .1,.8))
+
+x1 <- rbeta(n,1,1)+rnorm(n,0,.01)
+
+##############################################
+#The next are designed to throw people off
+##############################################
+
+x5 <- rbeta(n,15,1)
+
+x7 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.46,.03))
+
+x8 <- rchisq(n,10,1)
+
+x9 <- rbinom(n, size = 10, prob = 0.01) + rnorm(n, 0, .5)
+
+
+
+ 
+## Then, create betas, sigma, normal error terms and y
+ 
+beta0 <- -4 
+beta1 <- 1.3
+beta2 <- .6
+#
+beta3 <- 7.3
+beta4 <- 2.2
+beta5 <- -.8
+beta6 <- -.2
+beta7 <- 0
+#
+beta8 <- -4.7
+beta9 <- -3.3
+beta10 <- 1
+beta11 <- .8
+beta12 <- -.2
+#
+beta13 <- 2.2
+beta14 <- 2.1
+beta15 <- -2.2
+beta16 <- -.8
+beta17 <- .6
+#
+beta18 <- -1.3
+beta19 <- -.9
+beta20 <- 2.4
+
+ 
+sigma <- .05 #change to whatever positive number you want
+
+#########################################################################
+#These are also part of the design that limits the domain of each line
+#These also make it so that most points are in the center of the eye
+#Even though it looks like the eye of Sauron, it's actually the milky way
+##########################################################################
+
+x1[x2 == 0 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 0 & x3 == 0 & x4 == 0 ), -2, 3)
+ 
+x1[x2 == 2 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 0 ), -1, -1.01)
+
+x1[x2 == 1 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 0 & x4 == 0 ), -3.3, 3)
+
+x1[x2 == 2 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0  ), -1.01, -1.01)
+
+x1[x2 == 1 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 0  ), -1.5, 3.1)
+
+x1[x2 == 2 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 1), --1, -1)
+
+x1[x2 == 1 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 1), -.5, 1.15)
+
+x1[x2 == 2 & x3 == 0& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 1), --1, -1)
+x1[x2 == 2 & x3 == 1& x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0), 1, 1.1)
+
+
+ ################################
+ # You ARE NOT ALLOWED to change this part:
+epsilon_i <- rnorm(n, 0, sigma) 
+ ################################ 
+ 
+ #An example of how to make Y...
+ # y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y_i <- beta0 + beta1*x1 + beta2*x1^2 +
+  
+  beta3*x2 + beta4*x1*x2 + beta5*x1^2*x2 + beta6*x1^3*x2 +
+  
+    beta8*x2*x3 + beta9*x1*x2*x3 + beta10*x1^2*x2*x3 + beta11*x1^3*x2*x3 + beta12*x1^4*x2*x3 +
+  
+  beta13*x2*x3*x4 + beta14*x1*x2*x3*x4 + beta15*x1^2*x2*x3*x4 + beta17*x1^3*x2*x3*x4 +
+  
+  beta18*x2*x3*x4*x7 + beta19*x1*x2*x3*x4*x7 + beta20*x1^2*x2*x3*x4*x7 +
+  
+  epsilon_i
+
+#...edit this code and replace it with your model. Don't forget the + epsilon_i!
+
+#################################################################
+#These are the second part of the evil plan to throw people off, even though I used y_i to make x10 I didn't use x10 in my true model, and it won't make a difference, it's only to distract people in the first pairs plot
+#################################################################
+
+
+x10 <- 1/Y_i^3
+
+x5 <- 1/(15*x9*x5^2 + I(rbeta(n,15,1)))
+
+x8 <- 1/(15*x9*x5^2 + I(rbeta(n,1,15)))
+
+
+x9 <- Y_i + rnorm(n,0,5)
+
+x6 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.001 ,.47))
+
+
+
+ ## Now, you need to load your x-variables and y-variable 
+ ## into a data set.
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the x-transformations.
+
+ # This loads your data into a data set:
+
+
+
+######################################################################
+#I added my transformations here only y and x1 using 1/i
+#######################################################################
+
+ rbdata1 <- data.frame(y=(1/Y_i), x1=1/(x1), x2=x2 ,x3=x3, x4=x4, x5=1/x5, x6=x6, x7=x7, x8=x8^3, x9=(x9), x10=(x10)) %>% 
+  drop_na()
+ 
+
+
+
+ #Now fit your model to make sure it comes out significant:
+
+############################################################################
+#My model is significant when untransformed; I'd have to untransform my columns and then do the lm. it has .97 R^2 and *'s in all p values
+#############################################################################
+
+##################################################
+## These are all the anti transformations needed ##
+##################################################
+
+rbdata1$y <- 1/(rbdata1$y)     
+rbdata1$x1 <- 1/(rbdata1$x1)
+
+mylm <- lm(y ~ x1 + I(x1^2) +
+             
+  x2 + x1:x2 + I(x1^2):x2 + I(x1^3):x2  + 
+    
+    x2:x3 + x1:x2:x3 + I(x1^2):x2:x3 + I(x1^3):x2:x3 + I(x1^4):x2:x3 +
+    
+    x2:x3:x4 + x1:x2:x3:x4 + I(x1^2):x2:x3:x4  + I(x1^3):x2:x3:x4 +
+    
+    x2:x3:x4:x7 + x1:x2:x3:x4:x7 + I(x1^2):x2:x3:x4:x7,
+              
+              data = rbdata1)
+
+ #edit this code to be your true model
+ #summary(mylm)
+ #all p-values must be significant
+ #the R^2 value must be greater than or equal to 0.30.
+
+###################
+#Retransforming before writing CSV
+###################
+ 
+ rbdata1$y <- 1/(rbdata1$y)    
+ rbdata1$x1 <- 1/(rbdata1$x1)
+
+# Once you are done with creating your model, and have successfully
+# graphed it (see below), un-comment the following `write.csv` code,
+# then, PLAY this ENTIRE R-chunk to write your data to a csv.
+
+#############################################
+# Here I change the columns orders and names
+#############################################
+ rbdata1 <- rbdata1 %>% 
+   rename(x8 = x1,
+          x1 = x2,
+          x7 = x3,
+          x10 = x4,
+          x3 = x7,
+          x2 = x8,
+          x4 = x10) %>% 
+   select(
+     y,x1,x2,x3,x4,x5,
+     x6,x7,x8,x9,x10) %>% 
+  drop_na()
+ 
+ 
+#write.csv(rbdata1, "rbdata1.csv", row.names=FALSE)
+
+
+# The above code writes the dataset to your "current directory"
+# # To see where that is, use: getwd() in your Console.
+# # Find the rbdata.csv data set and upload it to I-Learn.
+#  rbdata1$y <- 1/(rbdata1$y)     
+#  rbdata1$x8 <- 1/(rbdata1$x8)
+# # ggplot(rbdata1, aes(x8,y))+
+# #   geom_point()
+# pairs(rbdata1, panel=panel.smooth)
+
+  rbdata1$y <- 1/(rbdata1$y)    
+  rbdata1$x8 <- 1/(rbdata1$x8)
+
+b <- coef(mylm)
+
+whale2 <- ggplot(rbdata1, aes(x8,y, col=interaction(x1,x3,x7,x10)))+
+   geom_point(show.legend = F, pch=1, alpha=.5) +
+  # geom_point(aes(y=mylm$fit), cex=1)+
+   #facet_wrap(~interaction(x1,x3,x7,x10)) +
+  
+  #viridis::scale_color_viridis(direction = -1, option = "G", alpha = .1)+
+  
+  #geom_vline(xintercept = 0, linetype = "solid", col="grey50") +  
+  #geom_hline(yintercept = 0, linetype = "solid", col="grey50") +
+  
+  ###### Betas
+  
+  stat_function(fun = function(x)
+     beta0 + beta1*x +beta2*x^2,
+     color = "purple",
+     linetype = "dashed") +  # True line base
+
+   stat_function(fun = function(x)
+     (beta0 + beta3) + (beta1+beta4)*x + (beta2+beta5)*x^2 + beta6*x^3,
+     color = "black", linetype = "dashed") +  # True 2 on
+
+   stat_function(fun = function(x)
+     (beta0 + beta3 + beta8) +
+     (beta1 + beta4 + beta9)*x +
+     (beta2 + beta5 + beta10)*x^2 +
+     (beta6 + beta11)*x^3 +
+     beta12*x^4,
+     color = "red", linetype = "dashed") +  # True 3 on
+  
+    stat_function(fun = function(x)
+     (beta0 + beta3 + beta8 + beta13) +
+     (beta1 + beta4 + beta9 + beta14)*x +
+     (beta2 + beta5 + beta10 + beta15)*x^2 +
+     (beta6 + beta11 + beta17)*x^3,
+     color = "blue", linetype = "dashed") +      # True 4 on
+  
+    stat_function(fun = function(x)
+     (beta0 + beta3 + beta8 + +beta13 + beta18) +
+     (beta1 + beta4 + beta9 + beta14 + beta19)*x +
+     (beta2 + beta5 + beta10 + beta15 + beta20)*x^2+
+     (beta6 + beta11 + beta17)*x^3,
+     color = "green", linetype = "dashed") +
+
+  ######coefficients
+
+ stat_function(fun = function(x)
+   b[1] + b[2]*x + b[3]*x^2,
+   color = "purple4",
+   linetype = "solid") +  # base line model
+
+ stat_function(fun = function(x)
+   (b[1] + b[4]) + (b[2] + b[5])*x + (b[3]+b[6])*x^2 + (b[7])*x^3,
+   color = "black", linetype = "solid") +  # model 2 on
+
+ stat_function(fun = function(x)
+   (b[1] + b[4] + b[8]) +
+   (b[2]+ b[5]+ b[9])*x +
+   (b[3]+b[6]+b[10])*x^2 +
+   (b[7]+b[11])*x^3+
+   b[12]*x^4,
+   color = "red4", linetype = "solid") +   # model 3 on
+
+ stat_function(fun = function(x)
+   (b[1] + b[4] + b[8] +b[13]) +
+   (b[2]+ b[5]+ b[9]+b[14])*x +
+   (b[3]+b[6]+b[10]+b[15])*x^2 +
+   (b[7]+b[11]+b[16])*x^3,
+     color = "blue4", linetype = "solid") +   # model 3 on
+  
+  stat_function(fun = function(x)
+   (b[1] + b[4] + b[8] +b[13] +b[17]) +
+   (b[2]+ b[5]+ b[9]+b[14]+b[18])*x +
+   (b[3]+b[6]+b[10]+b[15]+b[19])*x^2+
+   (b[7]+b[11]+b[16])*x^3,
+    color = "green4", linetype = "solid") +
+
+  
+labs(title = "|Whale With Regression Lines|\n") +
+  
+  
+  coord_cartesian(ylim=c(-5,10))+
+
+  theme_minimal()
+
+ rbdata1$y <- 1/(rbdata1$y)     
+ rbdata1$x8 <- 1/(rbdata1$x8)
+
+```
+
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 10px; padding: 6px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); max-width: 1000px; margin: auto; animation: fadeIn 0.5s ease-in-out;">
+
+```{r echo=FALSE, fig.width=10, fig.align='center', message=FALSE, warning=FALSE}
+whale2
+```
+
+</div>
+<div class="graph-container" data-graphname="whalelines">
+<div class="rating-prompt" style="cursor: pointer;" data-title="Would you help my website analytics personal project by rating the graph above?" onmouseover="showTooltip(event, this)" onmouseout="hideTooltip();">Click here to rate this graph.</div></div>
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Desmos Model**</strong></p>
+
+Now, to show you how it all started.
+
+**This is the blueprint for my model. I first started trying to create a simple version of the Milky way (See below), but didn't convince me.**
+
+<br>
+
+<img src="_site/images/bship.png" style="display: block; margin: 0 auto; max-width: 60%; border-radius: 10px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+
+<br>
+
+**Then, after tweaking things here and there, I ended up creating a model that convinced me the most. This was the model I competed with in class.**
+
+<br>
+
+<img src="_site/images/whale.png" style="display: block; margin: 0 auto; max-width: 60%; border-radius: 10px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Code**</strong></p>
+
+**I purposely made the table below be in a raw-format** so that the output summary shows all details; especially that all terms are significant even at the **.01** level.
+
+<div class="latex-container">
+
+```{r warning=FALSE, comment=NA}
+#set.seed(16) #n 300
+
+set.seed(8) #404
+
+#set.seed(120) 
+#set.seed(13)
+
+
+#This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+n <- 404
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... ## To see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values. But the way you choose your x-values can have quite an impact on what the final scatterplot of the data will look like.
+
+################################
+#These belong to my true model
+################################
+
+ 
+
+x2 <- sample(c(0,1,2), n, replace = T, prob=c(.3,.6,.1))
+
+x3 <- sample(c(0,1), n, replace = T, prob=c( .4,.4))
+
+x4 <- sample(c(0,1), n, replace = T, prob = c( .1,.8))
+
+x1 <- rbeta(n,1,1)+rnorm(n,0,.01)
+
+##############################################
+#The next are designed to throw people off
+##############################################
+
+x5 <- rbeta(n,15,1)
+
+x7 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.46,.03))
+
+x8 <- rchisq(n,10,1)
+
+x9 <- rbinom(n, size = 10, prob = 0.01) + rnorm(n, 0, .5)
+
+
+
+ 
+## Then, create betas, sigma, normal error terms and y
+ 
+beta0 <- -4 
+beta1 <- 1.3
+beta2 <- .6
+#
+beta3 <- 7.3
+beta4 <- 2.2
+beta5 <- -.8
+beta6 <- -.2
+beta7 <- 0
+#
+beta8 <- -4.7
+beta9 <- -3.3
+beta10 <- 1
+beta11 <- .8
+beta12 <- -.2
+#
+beta13 <- 2.2
+beta14 <- 2.1
+beta15 <- -2.2
+beta16 <- -.8
+beta17 <- .6
+#
+beta18 <- -1.3
+beta19 <- -.9
+beta20 <- 2.4
+
+ 
+sigma <- .05 #change to whatever positive number you want
+
+#########################################################################
+#These are also part of the design that limits the domain of each line
+#These also make it so that most points are in the center of the eye
+#Even though it looks like the eye of Sauron, it's actually the milky way
+##########################################################################
+
+x1[x2 == 0 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 0 & x3 == 0 & x4 == 0 ), -2, 3)
+ 
+x1[x2 == 2 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 0 ), -1, -1.01)
+
+x1[x2 == 1 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 0 & x4 == 0 ), -3.3, 3)
+
+x1[x2 == 2 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0  ), -1.01, -1.01)
+
+x1[x2 == 1 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 0  ), -1.5, 3.1)
+
+x1[x2 == 2 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 1), --1, -1)
+
+x1[x2 == 1 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 1), -.5, 1.15)
+
+x1[x2 == 2 & x3 == 0& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 1), --1, -1)
+x1[x2 == 2 & x3 == 1& x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0), 1, 1.1)
+
+
+ ################################
+ # You ARE NOT ALLOWED to change this part:
+epsilon_i <- rnorm(n, 0, sigma) 
+ ################################ 
+ 
+ #An example of how to make Y...
+ # y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y_i <- beta0 + beta1*x1 + beta2*x1^2 +
+  
+  beta3*x2 + beta4*x1*x2 + beta5*x1^2*x2 + beta6*x1^3*x2 +
+  
+    beta8*x2*x3 + beta9*x1*x2*x3 + beta10*x1^2*x2*x3 + beta11*x1^3*x2*x3 + beta12*x1^4*x2*x3 +
+  
+  beta13*x2*x3*x4 + beta14*x1*x2*x3*x4 + beta15*x1^2*x2*x3*x4 + beta17*x1^3*x2*x3*x4 +
+  
+  beta18*x2*x3*x4*x7 + beta19*x1*x2*x3*x4*x7 + beta20*x1^2*x2*x3*x4*x7 +
+  
+  epsilon_i
+
+#...edit this code and replace it with your model. Don't forget the + epsilon_i!
+
+#################################################################
+#These are the second part of the evil plan to throw people off, even though I used y_i to make x10 I didn't use x10 in my true model, and it won't make a difference, it's only to distract people in the first pairs plot
+#################################################################
+
+
+x10 <- 1/Y_i^3
+
+x5 <- 1/(15*x9*x5^2 + I(rbeta(n,15,1)))
+
+x8 <- 1/(15*x9*x5^2 + I(rbeta(n,1,15)))
+
+
+x9 <- Y_i + rnorm(n,0,5)
+
+x6 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.001 ,.47))
+
+
+
+ ## Now, you need to load your x-variables and y-variable 
+ ## into a data set.
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the x-transformations.
+
+ # This loads your data into a data set:
+
+
+
+######################################################################
+#I added my transformations here only y and x1 using 1/i
+#######################################################################
+
+ rbdata1 <- data.frame(y=(1/Y_i), x1=1/(x1), x2=x2 ,x3=x3, x4=x4, x5=1/x5, x6=x6, x7=x7, x8=x8^3, x9=(x9), x10=(x10)) %>% 
+  drop_na()
+ 
+
+
+
+ #Now fit your model to make sure it comes out significant:
+
+############################################################################
+#My model is significant when untransformed; I'd have to untransform my columns and then do the lm. it has .97 R^2 and *'s in all p values
+#############################################################################
+
+##################################################
+## These are all the anti transformations needed ##
+##################################################
+
+rbdata1$y <- 1/(rbdata1$y)     
+rbdata1$x1 <- 1/(rbdata1$x1)
+
+mylm <- lm(y ~ x1 + I(x1^2) +
+             
+  x2 + x1:x2 + I(x1^2):x2 + I(x1^3):x2  + 
+    
+    x2:x3 + x1:x2:x3 + I(x1^2):x2:x3 + I(x1^3):x2:x3 + I(x1^4):x2:x3 +
+    
+    x2:x3:x4 + x1:x2:x3:x4 + I(x1^2):x2:x3:x4  + I(x1^3):x2:x3:x4 +
+    
+    x2:x3:x4:x7 + x1:x2:x3:x4:x7 + I(x1^2):x2:x3:x4:x7,
+              
+              data = rbdata1)
+
+ #edit this code to be your true model
+ summary(mylm)
+ #all p-values must be significant
+ #the R^2 value must be greater than or equal to 0.30.
+
+###################
+#Retransforming before writing CSV
+###################
+ 
+ rbdata1$y <- 1/(rbdata1$y)    
+ rbdata1$x1 <- 1/(rbdata1$x1)
+
+# Once you are done with creating your model, and have successfully
+# graphed it (see below), un-comment the following `write.csv` code,
+# then, PLAY this ENTIRE R-chunk to write your data to a csv.
+
+#############################################
+# Here I change the columns orders and names
+#############################################
+ rbdata1 <- rbdata1 %>% 
+   rename(x8 = x1,
+          x1 = x2,
+          x7 = x3,
+          x10 = x4,
+          x3 = x7,
+          x2 = x8,
+          x4 = x10) %>% 
+   select(
+     y,x1,x2,x3,x4,x5,
+     x6,x7,x8,x9,x10) %>% 
+  drop_na()
+ 
+ 
+#write.csv(rbdata1, "rbdata1.csv", row.names=FALSE)
+
+
+# The above code writes the dataset to your "current directory"
+# # To see where that is, use: getwd() in your Console.
+# # Find the rbdata.csv data set and upload it to I-Learn.
+#  rbdata1$y <- 1/(rbdata1$y)     
+#  rbdata1$x8 <- 1/(rbdata1$x8)
+# # ggplot(rbdata1, aes(x8,y))+
+# #   geom_point()
+# pairs(rbdata1, panel=panel.smooth)
+```
+
+</div>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Math Model**</strong></p>
+
+In case you are curious about the mathematical equation used for this model:
+
+<br>
+
+<div class="latex-container">
+
+$$
+Y_i = \beta_0 + \beta_1 \, x_1 + \beta_2 \, x_1^2 + \\ \beta_3 \, x_2 + \beta_4 \, x_1 \, x_2 + \beta_5 \, x_1^2 \, x_2 + \\ \beta_6 \, x_1^3 \, x_2 + \beta_8 \, x_2 \, x_3 + \beta_9 \, x_1 \, x_2 \, x_3 + \\ \beta_{10} \, x_1^2 \, x_2 \, x_3 + \beta_{11} \, x_1^3 \, x_2 \, x_3 + \\ \beta_{12} \, x_1^4 \, x_2 \, x_3 + \beta_{13} \, x_2 \, x_3 \, x_4 + \\ \beta_{14} \, x_1 \, x_2 \, x_3 \, x_4 + \beta_{15} \, x_1^2 \, x_2 \, x_3 \, x_4 + \\ \beta_{17} \, x_1^3 \, x_2 \, x_3 \, x_4 + \beta_{18} \, x_2 \, x_3 \, x_4 \, x_7 + \\ \beta_{19} \, x_1 \, x_2 \, x_3 \, x_4 \, x_7 + \beta_{20} \, x_1^2 \, x_2 \, x_3 \, x_4 \, x_7 \\\ \\ 
+$$
+
+</div>
+
+<br>
+
+---
+
+> <p style="color: #127566; text-align: left;"><strong>**Game Results**</strong></p>
+
+Once the Regression Battleship competition was completed, we compared the summary of our guesses. Whoever got the highest R^2^ would win! 
+
+Check out the pictures below, the first one is my original model (What they were supposed to get), the second one is what one of them guessed (It was the closest one). 
+
+The players' names are private.
+
+<div class="latex-container">
+
+```{r message=FALSE, warning=FALSE}
+set.seed(15)
+
+n <- 404
+
+x2 <- sample(c(0,1,2), n, replace = T, prob=c(.3,.6,.1))
+
+x3 <- sample(c(0,1), n, replace = T, prob=c( .4,.4))
+
+x4 <- sample(c(0,1), n, replace = T, prob = c( .1,.8))
+
+x1 <- rbeta(n,1,1)+rnorm(n,0,.01)
+
+x5 <- rbeta(n,15,1)
+
+x7 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.46,.03))
+
+x8 <- rchisq(n,10,1)
+
+x9 <- rbinom(n, size = 10, prob = 0.01) + rnorm(n, 0, .5)
+
+
+ 
+beta0 <- -4 
+beta1 <- 1.3
+beta2 <- .6
+#
+beta3 <- 7.3
+beta4 <- 2.2
+beta5 <- -.8
+beta6 <- -.2
+beta7 <- 0
+#
+beta8 <- -4.7
+beta9 <- -3.3
+beta10 <- 1
+beta11 <- .8
+beta12 <- -.2
+#
+beta13 <- 2.2
+beta14 <- 2.1
+beta15 <- -2.2
+beta16 <- -.8
+beta17 <- .6
+#
+beta18 <- -1.3
+beta19 <- -.9
+beta20 <- 2.4
+
+ 
+sigma <- .05 #change to whatever positive number you want
+
+
+x1[x2 == 0 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 0 & x3 == 0 & x4 == 0 ), -2, 3)
+ 
+x1[x2 == 2 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 0 ), -1, -1.01)
+
+x1[x2 == 1 & x3 == 0 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 0 & x4 == 0 ), -3.3, 3)
+
+x1[x2 == 2 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0  ), -1.01, -1.01)
+
+x1[x2 == 1 & x3 == 1 & x4 == 0 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 0  ), -1.5, 3.1)
+
+x1[x2 == 2 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 1), --1, -1)
+
+x1[x2 == 1 & x3 == 1& x4 == 1 ] <- runif(sum(x2 == 1 & x3 == 1 & x4 == 1), -.5, 1.15)
+
+x1[x2 == 2 & x3 == 0& x4 == 1 ] <- runif(sum(x2 == 2 & x3 == 0 & x4 == 1), --1, -1)
+x1[x2 == 2 & x3 == 1& x4 == 0 ] <- runif(sum(x2 == 2 & x3 == 1 & x4 == 0), 1, 1.1)
+
+epsilon_i <- rnorm(n, 0, sigma) 
+
+ 
+ Y_i <- beta0 + beta1*x1 + beta2*x1^2 +
+  
+  beta3*x2 + beta4*x1*x2 + beta5*x1^2*x2 + beta6*x1^3*x2 +
+  
+    beta8*x2*x3 + beta9*x1*x2*x3 + beta10*x1^2*x2*x3 + beta11*x1^3*x2*x3 + beta12*x1^4*x2*x3 +
+  
+  beta13*x2*x3*x4 + beta14*x1*x2*x3*x4 + beta15*x1^2*x2*x3*x4 + beta17*x1^3*x2*x3*x4 +
+  
+  beta18*x2*x3*x4*x7 + beta19*x1*x2*x3*x4*x7 + beta20*x1^2*x2*x3*x4*x7 +
+  
+  epsilon_i
+
+x10 <- 1/Y_i^3
+
+x5 <- 1/(15*x9*x5^2 + I(rbeta(n,15,1)))
+
+x8 <- 1/(15*x9*x5^2 + I(rbeta(n,1,15)))
+
+
+x9 <- Y_i + rnorm(n,0,5)
+
+x6 <- sample(c(0,1,2), n, replace = T, prob=c( .48,.001 ,.47))
+
+ rbdata2 <- data.frame(y=(1/Y_i), x1=1/(x1), x2=x2 ,x3=x3, x4=x4, x5=1/x5, x6=x6, x7=x7, x8=x8^3, x9=(x9), x10=(x10)) %>% 
+  drop_na()
+
+
+dt <- rbdata2 %>% 
+   rename(x8 = x1,
+          x1 = x2,
+          x7 = x3,
+          x10 = x4,
+          x3 = x7,
+          x2 = x8,
+          x4 = x10) %>% 
+   select(
+     y,x1,x2,x3,x4,x5,
+     x6,x7,x8,x9,x10) %>% 
+  drop_na()
+
+##################################################################
+
+#################################################################
+
+#Hans
+
+
+dt1 <- rbdata1 %>%
+  mutate(
+    s1 = ifelse(x1==1 & x3==0 & x6==0 & x7==1 & x10==1, 1,0),
+    s2 = ifelse(x1==1 & x3==1 & x6==0 & x7==1 & x10==1, 1,0),
+    s3 = ifelse(x1==1 & x3==0 & x6==2 & x7==1 & x10==1, 1,0),
+    s4 = ifelse(x1==1 & x3==1 & x6==2 & x7==1 & x10==1, 1,0)
+  )
+
+hlm <- lm(y~x4+
+                s1+s1:x4+
+                s2:x4+s2:I(x4^2)+
+                s3+s3:x4+
+                s4:x4
+              , data = dt1)
+
+
+dt2 <- dt %>%
+  mutate(
+    s1 = ifelse(x1==1 & x3==0 & x6==0 & x7==1 & x10==1, 1,0),
+    s2 = ifelse(x1==1 & x3==1 & x6==0 & x7==1 & x10==1, 1,0),
+    s3 = ifelse(x1==1 & x3==0 & x6==2 & x7==1 & x10==1, 1,0),
+    s4 = ifelse(x1==1 & x3==1 & x6==2 & x7==1 & x10==1, 1,0)
+  )
+
+  yhc <- predict(hlm, newdata=dt2)
+  ybarc <- mean(dt2$y) 
+  SSTOc <- sum( (dt2$y - ybarc)^2 )
+  SSEc <- sum( (dt2$y - yhc)^2 )
+  
+
+###############################################################################
+
+#youbin
+
+ylm <- lm(y ~ x4 + x5:x4:x9 + x4:x7 + x4:x3 +x4:I(x6^4), data = rbdata1)
+
+
+  yhcc <- predict(ylm, newdata=dt)
+  ybarcc <- mean(dt$y) 
+  SSTOcc <- sum( (dt$y - ybarcc)^2 )
+  SSEcc <- sum( (dt$y - yhcc)^2 )
+  
+
+#################################################
+
+#B Saunders
+
+ rbdata1$y <- 1/(rbdata1$y)     
+ rbdata1$x8 <- 1/(rbdata1$x8)
+
+bsalm <- lm(formula = y ~ x1 + x7 + x3 + x8 + I(x8^2) + x1:x7 + x1:x3 + 
+    x7:x10 + x3:x10 + x1:x8 + x7:x8 + x3:x8 + x1:I(x8^2) + x7:I(x8^2) + 
+    x3:I(x8^2) + x1:x7:x3 + x1:x7:x10 + x1:x3:x10 + x1:x7:x8 + 
+    x1:x3:x8 + x7:x3:x8 + x7:x10:x8 + x3:x10:x8 + x1:x7:I(x8^2) + 
+    x1:x3:I(x8^2) + x7:x3:I(x8^2) + x7:x10:I(x8^2) + x3:x10:I(x8^2) + 
+    x1:x8:I(x8^2) + x7:x8:I(x8^2) + x3:x8:I(x8^2) + x1:x7:x3:x10 + 
+    x1:x7:x3:x8 + x1:x7:x10:x8 + x1:x3:x10:x8 + x7:x3:x10:x8 + 
+    x1:x7:x3:I(x8^2) + x1:x7:x10:I(x8^2) + x1:x3:x10:I(x8^2) + 
+    x7:x3:x10:I(x8^2) + x1:x7:x8:I(x8^2) + x1:x3:x8:I(x8^2) + 
+    x7:x10:x8:I(x8^2) + x3:x10:x8:I(x8^2) + x1:x7:x3:x10:x8 + 
+    x1:x7:x10:x8:I(x8^2) + x1:x3:x10:x8:I(x8^2), data = rbdata1)
+
+ rbdata1$y <- 1/(rbdata1$y)     
+ rbdata1$x8 <- 1/(rbdata1$x8)
+ 
+ 
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+ 
+  yhs <- predict(bsalm, newdata=dt)
+  ybars <- mean(dt$y) 
+  SSTOs <- sum( (dt$y - ybars)^2 )
+  SSEs <- sum( (dt$y - yhs)^2 )
+  
+  
+  dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+
+#################################################
+
+#mine
+
+ rbdata1$y <- 1/(rbdata1$y)     
+ rbdata1$x8 <- 1/(rbdata1$x8)
+
+mylm <- lm(y ~ x8 + I(x8^2) +
+             
+  x1 + x8:x1 + I(x8^2):x1 + I(x8^3):x1  + 
+    
+    x1:x7 + x8:x1:x7 + I(x8^2):x1:x7 + I(x8^3):x1:x7 + I(x8^4):x1:x7 +
+    
+    x1:x7:x10 + x8:x1:x7:x10 + I(x8^2):x1:x7:x10  + I(x8^3):x1:x7:x10 +
+    
+    x1:x7:x10:x3 + x8:x1:x7:x10:x3 + I(x8^2):x1:x7:x10:x3,
+              
+              data = rbdata1)
+
+ rbdata1$y <- 1/(rbdata1$y)     
+ rbdata1$x8 <- 1/(rbdata1$x8)
+
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+ 
+  yht <- predict(mylm, newdata=dt)
+  ybart <- mean(dt$y) 
+  SSTOt <- sum( (dt$y - ybart)^2 )
+  SSEt <- sum( (dt$y - yht)^2 )
+  
+  dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+
+
+####################################################
+ 
+################## validation
+  
+  # Compute R-squared for each
+  rst <- 1 - SSEt/SSTOt
+  rss <- 1 - SSEs/SSTOs
+  rsc <- 1 - SSEc/SSTOc
+  rscc <- 1 - SSEcc/SSTOcc
+  # Compute adjusted R-squared for each
+  n <- length(dt$y) #sample size
+  pt <- length(coef(mylm)) #num. parameters in model
+  ps <- length(coef(bsalm))
+  pc <- length(coef(hlm))
+  pcc  <- length(coef(ylm)) #num. parameters in model
+  rsta <- 1 - (n-1)/(n-pt)*SSEt/SSTOt
+  rssa <- 1 - (n-1)/(n-ps)*SSEs/SSTOs
+  rsca <- 1 - (n-1)/(n-pc)*SSEc/SSTOc
+  rscca <- 1 - (n-1)/(n-pcc)*SSEcc/SSTOcc
+
+my_output_table2 <- data.frame(
+  
+  
+  Model = c(
+    
+    "Tona", "Person 1", "Person 2", "Person 3"),
+  
+  `Original R2` = c(
+    
+    summary(mylm)$r.squared,
+    
+    summary(bsalm)$r.squared, 
+    
+    summary(hlm)$r.squared, 
+    
+    summary(ylm)$r.squared), 
+  
+  `Orig. Adj. R-squared` = c(
+    
+    summary(mylm)$adj.r.squared,
+    
+    summary(bsalm)$adj.r.squared,
+    
+    summary(hlm)$adj.r.squared,
+    
+    summary(ylm)$adj.r.squared),
+  
+  `Validation R-squared` = c(
+    
+    rst, rss, rsc, rscc),
+  
+  `Validation Adj. R^2` = c(
+    
+    rsta, rssa, rsca, rscca))
+
+
+
+colnames(my_output_table2) <- c(
+  
+  "Model", "Original $R^2$", 
+  
+  "Original Adj. $R^2$", 
+  
+  "Validation $R^2$", 
+  
+  "Validation Adj. $R^2$")
+
+knitr::kable(my_output_table2, escape=TRUE, digits=5)
+
+```
+
+</div>
+
+```{r, fig.align='center'}
+
+#####################################################
+# I untransform first before plotting my final model
+#####################################################
+
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+
+b <- coef(mylm)
+
+ggplot(dt, aes(x8, y)) +
+  geom_point(show.legend = F, aes(col=interaction(x1,x7,x10,x3)), pch=18, cex=1.1) +
+  #facet_wrap(~interaction(x1,x7,x10,x3))+
+
+
+  
+  #geom_vline(xintercept = 0, linetype = "solid", col="grey50") +  
+  #geom_hline(yintercept = 0, linetype = "solid", col="grey50") +
+  
+  ###### Betas
+  ######coefficients
+
+ stat_function(fun = function(x)
+   b[1] + b[2]*x + b[3]*x^2,
+   color = "purple4",
+   linetype = "solid", linewidth=.57) +  # base line model
+
+ stat_function(fun = function(x)
+   (b[1] + b[4]) + (b[2] + b[5])*x + (b[3]+b[6])*x^2 + (b[7])*x^3,
+   color = "black", linetype = "solid", linewidth=.57) +  # model 2 on
+
+ stat_function(fun = function(x)
+   (b[1] + b[4] + b[8]) +
+   (b[2]+ b[5]+ b[9])*x +
+   (b[3]+b[6]+b[10])*x^2 +
+   (b[7]+b[11])*x^3+
+   b[12]*x^4,
+   color = "red4", linetype = "solid", linewidth=.57) +   # model 3 on
+
+  
+  
+ stat_function(fun = function(x)
+   (b[1] + b[4] + b[8] +b[13]) +
+   (b[2]+ b[5]+ b[9]+b[14])*x +
+   (b[3]+b[6]+b[10]+b[15])*x^2 +
+   (b[7]+b[11]+b[16])*x^3+
+   b[12]*x^4,
+     color = "green4", linetype = "solid", linewidth=.57) +   # model 4 on
+  
+  stat_function(fun = function(x)
+   (b[1] + b[4] + b[8] +b[13] +b[17]) +
+   (b[2]+ b[5]+ b[9]+b[14]+b[18])*x +
+   (b[3]+b[6]+b[10]+b[15]+b[19])*x^2+
+   (b[7]+b[11]+b[16])*x^3+
+   b[12]*x^4,
+   color = "purple4", linetype = "solid", linewidth=.57) +
+  
+  
+labs(title = "Plotted model",
+     caption = "This is the wayl") +
+  
+  
+  coord_cartesian(ylim=c(-5,10))+
+
+  theme_classic()+
+  
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+
+```
+
+
+```{r, fig.align='center'}
+
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+
+palette(c("skyblue","orange","green","purple","steelblue","red","green3","black"))
+
+plot(y ~ x8, data=dt,main ="Person 1 Guess at my Model", col=interaction(x1,x7,x3,x10, drop=TRUE))
+#points(bsalm$fit ~ x8, data=dt, col=interaction(x1,x7,x3,x10, drop=TRUE), pch=16, cex=0.5)
+
+
+
+b <- coef(bsalm)
+#gsub("I","",gsub(":","*",paste("b[", 1:48, "]*", names(b), collapse=" + ")))
+
+drawit <- function(x1=0, x7=0, x3=0, x10=0, i=1){
+  curve(b[ 1 ] + b[ 2 ]* x1 + b[ 3 ]* x7 + b[ 4 ]* x3 + b[ 5 ]* x8 + b[ 6 ]* (x8^2) + b[ 7 ]* x1*x7 + b[ 8 ]* x1*x3 + b[ 9 ]* x7*x10 + b[ 10 ]* x3*x10 + b[ 11 ]* x1*x8 + b[ 12 ]* x7*x8 + b[ 13 ]* x3*x8 + b[ 14 ]* x1*(x8^2) + b[ 15 ]* x7*(x8^2) + b[ 16 ]* x3*(x8^2) + b[ 17 ]* x1*x7*x3 + b[ 18 ]* x1*x7*x10 + b[ 19 ]* x1*x3*x10 + b[ 20 ]* x1*x7*x8 + b[ 21 ]* x1*x3*x8 + b[ 22 ]* x7*x3*x8 + b[ 23 ]* x7*x8*x10 + b[ 24 ]* x3*x8*x10 + b[ 25 ]* x1*x7*(x8^2) + b[ 26 ]* x1*x3*(x8^2) + b[ 27 ]* x7*x3*(x8^2) + b[ 28 ]* x7*(x8^2)*x10 + b[ 29 ]* x3*(x8^2)*x10 + b[ 30 ]* x1*x8*(x8^2) + b[ 31 ]* x7*x8*(x8^2) + b[ 32 ]* x3*x8*(x8^2) + b[ 33 ]* x1*x7*x3*x10 + b[ 34 ]* x1*x7*x3*x8 + b[ 35 ]* x1*x7*x8*x10 + b[ 36 ]* x1*x3*x8*x10 + b[ 37 ]* x7*x3*x8*x10 + b[ 38 ]* x1*x7*x3*(x8^2) + b[ 39 ]* x1*x7*(x8^2)*x10 + b[ 40 ]* x1*x3*(x8^2)*x10 + b[ 41 ]* x7*x3*(x8^2)*x10 + b[ 42 ]* x1*x7*x8*(x8^2) + b[ 43 ]* x1*x3*x8*(x8^2) + b[ 44 ]* x7*x8*(x8^2)*x10 + b[ 45 ]* x3*x8*(x8^2)*x10 + b[ 46 ]* x1*x7*x3*x8*x10 + b[ 47 ]* x1*x7*x8*(x8^2)*x10 + b[ 48 ]* x1*x3*x8*(x8^2)*x10, add=TRUE, xname="x8", col=palette()[i])  
+}
+
+drawit(0,0,0,0,1)
+drawit(1,0,0,0,2)
+drawit(1,1,0,0,3)
+drawit(1,1,1,0,4)
+drawit(1,1,1,1,5)
+drawit(0,0,1,1,6)
+drawit(1,0,1,1,7)
+#drawit(1,0,0,1,8) same as 2
+drawit(1,1,0,1,7)
+
+ dt$y <- 1/(dt$y)     
+ dt$x8 <- 1/(dt$x8)
+```
+
+<br>
+
+**PS. Did you see the whale? :)**
+
+<br><br>
