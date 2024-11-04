@@ -1,6 +1,19 @@
-# Link to Project
+<h3 align="center">Classical Decomposition</h3>
+
+![rexburg_temperature_animation](https://github.com/user-attachments/assets/80e6308b-7df1-4777-8b73-50a3c9aecd57)
+
+Used classical additive decomposition on weather data.
 
 ---
-Sadly, I deleted all code for creating the animation for this project. Which inspired me to begin this repo. My paper has some code for my other visuals for this project.
-https://tonadeleon.netlify.app/rexburghighs <- Link to the full reading for this project on my website.
+
+<h3 align="center">Decomposition</h3>
+
+![decomposition](https://github.com/user-attachments/assets/2375e537-3153-48fd-b45f-7fc305bb439e)
+
+Explained the components of a classical decomposition.
+
 ---
+
+<h3 align="center">Link to Reading</h3>
+
+<p align="center">https://tonadeleon.netlify.app/rexburghighs </p>
