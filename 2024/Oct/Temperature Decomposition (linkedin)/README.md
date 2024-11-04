@@ -17,3 +17,9 @@ Explained the components of a classical decomposition.
 <h3 align="center">Link to Reading</h3>
 
 <p align="center">https://tonadeleon.netlify.app/rexburghighs </p>
+
+---
+
+<h3 align="center">Note:</h3>
+
+> Sadly, I didn't save the code used to create this animation, which sparked my desire to build this entire repository. However, you can find the code for the other visualizations I created for this paper at the link above.
