@@ -1,9 +1,3 @@
-# Link to Project
-
----
-
----
-
 <h3 align="center">Order in Chaos</h3>
 
 ![star_spirograph_animation](https://github.com/user-attachments/assets/f4c81bac-f4e9-463a-ab5e-e9d7c20187c5)
