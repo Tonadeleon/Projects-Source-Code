@@ -18,7 +18,7 @@ def initLine(ax):
     Returns:
     - trace: Line2D object representing the trace.
     """
-    return ax.plot([], [], color='white', linewidth=0.5)[0]
+    return ax.plot([], [], color='white', linewidth=1.5)[0]
 
 # 2
 def spiroanimation(frame, trace, z):
@@ -104,7 +104,7 @@ def main():
     p2 = 0
     p3 = 0
 
-    iterations = 4
+    iterations = 3
     theta = np.linspace(0, 2 * np.pi * iterations, 50000)
     
     # -----------------------------
@@ -120,9 +120,9 @@ def main():
     z = z * np.exp(1j * rotation_angle)
     
     # ease
-    final_duration = 20 
+    final_duration = 14 
     fps = 30
-    acceleration_factor = 6
+    acceleration_factor = 8
     total_frames = int(final_duration * fps)
     t = np.linspace(0, 1, total_frames)
     
